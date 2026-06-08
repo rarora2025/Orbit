@@ -5,6 +5,7 @@ import type { Contact } from './mockData';
 function makeContact(overrides: Partial<Contact>): Contact {
   return {
     id: '1',
+    position: 0,
     name: 'Jane Doe',
     company: 'Acme',
     role: 'Engineer',
