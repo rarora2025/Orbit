@@ -9,7 +9,7 @@ import TopicMap from '@/components/TopicMap';
 import ContactModal from '@/components/ContactModal';
 import { Search, Plus } from 'lucide-react';
 
-const BOARD_STATUSES: Status[] = ['To Send', 'Pending', 'Responded', 'Meeting', 'Ghosted'];
+const BOARD_STATUSES: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
 
 type View = 'board' | 'table' | 'map';
 
@@ -22,7 +22,7 @@ const VIEWS: { id: View; label: string }[] = [
 export default function PipelinePage() {
   const { contacts, selectedContactId, selectContact, addContact, updateContact, moveContact } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
-  const [addStatus, setAddStatus] = useState<Status>('To Send');
+  const [addStatus, setAddStatus] = useState<Status>('Send');
   const [view, setView] = useState<View>('board');
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
@@ -34,9 +34,9 @@ export default function PipelinePage() {
 
   const byStatus = useMemo(() => {
     const map: Record<Status, typeof contacts> = {
-      'To Send': [], 'Pending': [], 'Responded': [], 'Meeting': [], 'Ghosted': [], 'Closed': [],
+      'Send': [], 'Pending': [], 'Response': [], 'Ghosted': [],
     };
-    for (const c of contacts) map[c.status].push(c);
+    for (const c of contacts) map[c.status]?.push(c);
     return map;
   }, [contacts]);
 
@@ -57,12 +57,12 @@ export default function PipelinePage() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200/60 flex-shrink-0">
           <div>
             <h1 className="text-xl font-bold text-stone-900 tracking-tight leading-tight">Pipeline</h1>
-            <p className="text-[12px] text-stone-400 mt-0.5">
+            <p className="text-[14px] text-stone-400 mt-0.5">
               {contacts.length} relationships · {totalNeedAction} need action
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-white border border-stone-200 rounded-xl overflow-hidden text-[12px] font-medium shadow-sm">
+            <div className="flex items-center bg-white border border-stone-200 rounded-xl overflow-hidden text-[14px] font-medium shadow-sm">
               {VIEWS.map(v => (
                 <button
                   key={v.id}
@@ -77,13 +77,13 @@ export default function PipelinePage() {
                 </button>
               ))}
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 shadow-sm transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 shadow-sm transition-colors">
               <Search size={12} />
               Search
             </button>
             <button
-              onClick={() => { setAddStatus('To Send'); setShowAdd(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600 shadow-sm transition-colors"
+              onClick={() => { setAddStatus('Send'); setShowAdd(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600 shadow-sm transition active:scale-95"
             >
               <Plus size={13} />
               Add person

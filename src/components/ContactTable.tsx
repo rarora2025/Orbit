@@ -6,6 +6,7 @@ import StatusPill from './StatusPill';
 import PriorityBadge from './PriorityBadge';
 import TagChip from './TagChip';
 import CompanyLogo from './CompanyLogo';
+import { companyDisplayName } from '@/lib/companyLogo';
 import { ExternalLink, Clock } from 'lucide-react';
 
 interface Props {
@@ -38,7 +39,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
               {HEADERS.map(h => (
                 <th
                   key={h}
-                  className="text-left text-[10px] font-semibold text-stone-400 uppercase tracking-wider px-4 py-2.5 whitespace-nowrap"
+                  className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider px-4 py-2.5 whitespace-nowrap"
                 >
                   {h}
                 </th>
@@ -49,8 +50,9 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
             {contacts.map((contact) => {
               const days = getDaysSince(contact.lastContacted);
               const isSelected = selectedId === contact.id;
-              const isOverdue = (contact.status === 'Pending' || contact.status === 'Meeting') && days > 7;
-              const companyInitial = (contact.company || contact.name).charAt(0).toUpperCase();
+              const isOverdue = contact.status === 'Pending' && days > 7;
+              const companyLabel = companyDisplayName(contact.company);
+              const companyInitial = (companyLabel || contact.name).charAt(0).toUpperCase();
 
               return (
                 <tr
@@ -64,11 +66,11 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   <td className="px-4 py-3 relative">
                     {isSelected && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-400 rounded-r" />}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 flex items-center justify-center text-[13px] font-bold flex-shrink-0">
                         {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-stone-800 leading-tight truncate">
+                        <p className="text-[15px] font-semibold text-stone-800 leading-tight truncate">
                           {contact.name}
                         </p>
                         {contact.linkedinUrl && (
@@ -77,7 +79,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-0.5 text-[10px] mt-0.5 text-stone-400 hover:text-blue-600"
+                            className="inline-flex items-center gap-0.5 text-[12px] mt-0.5 text-stone-400 hover:text-blue-600"
                           >
                             <ExternalLink size={9} />
                             LinkedIn
@@ -101,8 +103,8 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-stone-700 truncate">{contact.company || '—'}</p>
-                        <p className="text-[11px] text-stone-400 truncate">{contact.role}</p>
+                        <p className="text-[15px] font-medium text-stone-700 truncate">{companyLabel || '—'}</p>
+                        <p className="text-[13px] text-stone-400 truncate">{contact.role}</p>
                       </div>
                     </div>
                   </td>
@@ -120,13 +122,13 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   {/* Score */}
                   <td className="px-4 py-3">
                     <div className="w-[30px] h-[30px] rounded-full border-[1.5px] border-orange-400 flex items-center justify-center">
-                      <span className="text-[11px] font-bold text-orange-500 leading-none">{contact.score}</span>
+                      <span className="text-[13px] font-bold text-orange-500 leading-none">{contact.score}</span>
                     </div>
                   </td>
 
                   {/* Last contact */}
                   <td className="px-4 py-3">
-                    <div className={`flex items-center gap-1 text-[12px] ${isOverdue ? 'text-orange-600 font-medium' : 'text-stone-500'}`}>
+                    <div className={`flex items-center gap-1 text-[14px] ${isOverdue ? 'text-orange-600 font-medium' : 'text-stone-500'}`}>
                       {isOverdue && <Clock size={11} />}
                       <span>{formatShortDate(contact.lastContacted)}</span>
                       <span className="text-stone-300">·</span>
@@ -141,7 +143,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                         {contact.tags.slice(0, 2).map(tag => <TagChip key={tag} tag={tag} />)}
                       </div>
                     )}
-                    <p className="text-[11px] text-stone-500 leading-relaxed line-clamp-2">
+                    <p className="text-[13px] text-stone-500 leading-relaxed line-clamp-2">
                       {contact.nextAction}
                     </p>
                   </td>

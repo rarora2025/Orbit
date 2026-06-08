@@ -11,6 +11,22 @@ export function companyDomainGuess(company: string): string {
   return slug ? `${slug}.com` : '';
 }
 
+/**
+ * Human-friendly label for a company value. If the value was entered as a
+ * domain to pin the right logo (e.g. 'columbia.edu'), show just the name part
+ * ('Columbia'). Plain names ('Polymarket') pass through unchanged.
+ */
+export function companyDisplayName(company: string): string {
+  const c = company.trim();
+  if (!c) return '';
+  const lower = c.toLowerCase();
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(lower)) {
+    const name = lower.replace(/^www\./, '').split('.')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+  return c;
+}
+
 /** Clearbit logo URL for a company, or '' if no company. */
 export function companyLogoUrl(company: string): string {
   const domain = companyDomainGuess(company);

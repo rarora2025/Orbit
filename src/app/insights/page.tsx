@@ -2,6 +2,7 @@
 
 import { useCRMStore } from '@/lib/store';
 import { useMemo } from 'react';
+import { companyDisplayName } from '@/lib/companyLogo';
 import { Sparkles, TrendingUp, AlertTriangle, Users, Target, ArrowRight } from 'lucide-react';
 
 function getDaysSince(dateStr: string): number {
@@ -53,7 +54,7 @@ export default function InsightsPage() {
       results.push({
         type: 'warning',
         title: `${dreamPending.length} dream contact${dreamPending.length > 1 ? 's' : ''} still pending`,
-        description: `${dreamPending.map(c => `${c.name} (${c.company})`).join(', ')} ${dreamPending.length > 1 ? 'are' : 'is'} your highest priority. These should not sit idle.`,
+        description: `${dreamPending.map(c => `${c.name} (${companyDisplayName(c.company)})`).join(', ')} ${dreamPending.length > 1 ? 'are' : 'is'} your highest priority. These should not sit idle.`,
         priority: 'high',
       });
     }
@@ -94,7 +95,7 @@ export default function InsightsPage() {
 
     // VC contacts
     const vcCount = contacts.filter(c => c.tags.includes('VC / Funds')).length;
-    const respondedVC = contacts.filter(c => c.tags.includes('VC / Funds') && c.status === 'Responded').length;
+    const respondedVC = contacts.filter(c => c.tags.includes('VC / Funds') && c.status === 'Response').length;
     if (vcCount > 0) {
       results.push({
         type: 'opportunity',
@@ -105,12 +106,12 @@ export default function InsightsPage() {
     }
 
     // Contacts added recently
-    const toSend = contacts.filter(c => c.status === 'To Send');
+    const toSend = contacts.filter(c => c.status === 'Send');
     if (toSend.length > 0) {
       results.push({
         type: 'tip',
         title: `${toSend.length} contact${toSend.length > 1 ? 's' : ''} in your queue, not yet messaged`,
-        description: `${toSend.map(c => c.name).join(', ')} ${toSend.length > 1 ? 'are' : 'is'} marked "To Send" but you haven't reached out yet. Batch these and send this week.`,
+        description: `${toSend.map(c => c.name).join(', ')} ${toSend.length > 1 ? 'are' : 'is'} marked "Send" but you haven't reached out yet. Batch these and send this week.`,
         priority: 'medium',
       });
     }
@@ -147,9 +148,9 @@ export default function InsightsPage() {
 
   // Network overview stats
   const totalContacts = contacts.length;
-  const responseRate = Math.round((contacts.filter(c => c.status === 'Responded').length / totalContacts) * 100);
+  const responseRate = Math.round((contacts.filter(c => c.status === 'Response').length / totalContacts) * 100);
   const dreamCount = contacts.filter(c => c.priority === 'Dream').length;
-  const activeCount = contacts.filter(c => ['Pending', 'Responded', 'Follow-up Needed'].includes(c.status)).length;
+  const activeCount = contacts.filter(c => ['Pending', 'Response'].includes(c.status)).length;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -196,7 +197,7 @@ export default function InsightsPage() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-3 mb-1.5">
                       <p className="text-sm font-semibold text-stone-800 leading-snug">{insight.title}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${priority.color}`}>
+                      <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${priority.color}`}>
                         {priority.label}
                       </span>
                     </div>

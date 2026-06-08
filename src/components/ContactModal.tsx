@@ -15,12 +15,12 @@ interface Props {
   onSave?: (id: string, updates: Partial<Contact>) => void;
 }
 
-const statuses: Status[] = ['To Send', 'Pending', 'Responded', 'Meeting', 'Ghosted', 'Closed'];
+const statuses: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Dream'];
 
 const priorityScore: Record<Priority, number> = { Dream: 90, High: 78, Medium: 62, Low: 45 };
-const statusWarmth: Record<Status, 'Cool' | 'Warm' | 'Hot'> = {
-  'To Send': 'Cool', 'Pending': 'Warm', 'Responded': 'Warm', 'Meeting': 'Hot', 'Ghosted': 'Cool', 'Closed': 'Cool',
+const statusWarmth: Record<Status, 'Low' | 'Medium' | 'High'> = {
+  'Send': 'Low', 'Pending': 'Medium', 'Response': 'High', 'Ghosted': 'Low',
 };
 const avatarPalette = [
   'bg-teal-200 text-teal-900', 'bg-orange-200 text-orange-900', 'bg-blue-200 text-blue-900',
@@ -33,7 +33,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
   const [form, setForm] = useState({
     name: contact?.name ?? '',
     company: contact?.company ?? '',
-    status: contact?.status ?? ('To Send' as Status),
+    status: contact?.status ?? ('Send' as Status),
     priority: contact?.priority ?? ('Medium' as Priority),
   });
 
@@ -80,7 +80,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
       tags: [],
       lastContacted: new Date().toISOString().split('T')[0],
-      nextAction: form.status === 'To Send' ? `Send first message to ${form.name.trim()}` : `Follow up with ${form.name.trim()}`,
+      nextAction: form.status === 'Send' ? `Send first message to ${form.name.trim()}` : `Follow up with ${form.name.trim()}`,
       aiSummary: '',
       outreachAngle: '',
       suggestedMessage: '',
@@ -171,7 +171,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
           </button>
           <button
             onClick={handleSubmit}
-            className="px-5 py-2 bg-stone-900 text-white text-sm font-semibold rounded-lg hover:bg-stone-800 transition-colors shadow-sm"
+            className="px-5 py-2 bg-stone-900 text-white text-sm font-semibold rounded-lg hover:bg-stone-800 transition active:scale-95 shadow-sm"
           >
             {isEdit ? 'Save Changes' : 'Add Person'}
           </button>

@@ -4,23 +4,25 @@ import { useCRMStore } from '@/lib/store';
 import { useState, useMemo } from 'react';
 import StatusPill from '@/components/StatusPill';
 import TagChip from '@/components/TagChip';
+import { companyDisplayName } from '@/lib/companyLogo';
 import { PenLine, Copy, Check, Sparkles, ChevronDown, RefreshCw } from 'lucide-react';
 
 function generateMessage(contact: { name: string; company: string; role: string; inquiry: string; tags: string[]; status: string }): string {
   const firstName = contact.name.split(' ')[0];
+  const company = companyDisplayName(contact.company);
   const tag = contact.tags[0] || 'your space';
 
   const templates = [
-    `Hey ${firstName} — I've been building in the ${tag.toLowerCase()} space and your work at ${contact.company} is directly relevant. I'm working on Orbit, which helps predict and surface market signals in sports/gaming, and I'd love 15 minutes to ask how you think about ${contact.inquiry || 'product and market design'}. Would you be open to a quick chat?`,
-    `Hi ${firstName} — saw your work as ${contact.role} at ${contact.company} and thought it was especially relevant to what I'm building. I'm a student founder working on Orbit (sports prediction intelligence) and had a few specific questions about ${contact.inquiry || tag.toLowerCase()}. Would you be open to a quick call this week?`,
-    `Hey ${firstName} — I'm a student founder building Orbit in the sports prediction/gaming space. Your background at ${contact.company} is exactly the kind of operator perspective I'm trying to learn from. Could I ask you one or two questions about ${contact.inquiry || 'how you think about the market'}? Even a quick async reply would be hugely valuable.`,
+    `Hey ${firstName} — I've been building in the ${tag.toLowerCase()} space and your work at ${company} is directly relevant. I'm working on Orbit, which helps predict and surface market signals in sports/gaming, and I'd love 15 minutes to ask how you think about ${contact.inquiry || 'product and market design'}. Would you be open to a quick chat?`,
+    `Hi ${firstName} — saw your work as ${contact.role} at ${company} and thought it was especially relevant to what I'm building. I'm a student founder working on Orbit (sports prediction intelligence) and had a few specific questions about ${contact.inquiry || tag.toLowerCase()}. Would you be open to a quick call this week?`,
+    `Hey ${firstName} — I'm a student founder building Orbit in the sports prediction/gaming space. Your background at ${company} is exactly the kind of operator perspective I'm trying to learn from. Could I ask you one or two questions about ${contact.inquiry || 'how you think about the market'}? Even a quick async reply would be hugely valuable.`,
   ];
 
   if (contact.status === 'Ghosted') {
-    return `Hey ${firstName} — I know I reached out a while back and totally understand if the timing wasn't right. I've made a lot of progress on Orbit since then and had one specific question about your work at ${contact.company}: ${contact.inquiry || 'how you approached the early challenges'}. Even a short reply would mean a lot.`;
+    return `Hey ${firstName} — I know I reached out a while back and totally understand if the timing wasn't right. I've made a lot of progress on Orbit since then and had one specific question about your work at ${company}: ${contact.inquiry || 'how you approached the early challenges'}. Even a short reply would mean a lot.`;
   }
 
-  if (contact.status === 'Responded') {
+  if (contact.status === 'Response') {
     return `Hey ${firstName} — wanted to follow up on our last conversation. I've been making real progress on Orbit and thought you'd be interested in where things are heading. Would love to loop back and hear your take, and ideally set up a quick call if you have 20 minutes.`;
   }
 
@@ -78,8 +80,8 @@ export default function OutreachPage() {
                   <p className={`text-xs font-semibold truncate ${selectedId === c.id ? 'text-white' : 'text-stone-800'}`}>
                     {c.name}
                   </p>
-                  <p className={`text-[10px] truncate ${selectedId === c.id ? 'text-white/60' : 'text-stone-500'}`}>
-                    {c.company}
+                  <p className={`text-[12px] truncate ${selectedId === c.id ? 'text-white/60' : 'text-stone-500'}`}>
+                    {companyDisplayName(c.company)}
                   </p>
                 </div>
               </div>
@@ -109,7 +111,7 @@ export default function OutreachPage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="font-bold text-stone-900">{contact.name}</h2>
-                  <p className="text-sm text-stone-500">{contact.role} · {contact.company}</p>
+                  <p className="text-sm text-stone-500">{contact.role} · {companyDisplayName(contact.company)}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <StatusPill status={contact.status} size="sm" />
                     {contact.tags.slice(0, 3).map(tag => <TagChip key={tag} tag={tag} />)}
@@ -118,7 +120,7 @@ export default function OutreachPage() {
               </div>
               {contact.inquiry && (
                 <div className="mt-3 pt-3 border-t border-stone-100">
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-1">Inquiry</p>
+                  <p className="text-[12px] font-semibold text-stone-400 uppercase tracking-wider mb-1">Inquiry</p>
                   <p className="text-xs text-stone-600">{contact.inquiry}</p>
                 </div>
               )}
@@ -143,14 +145,14 @@ export default function OutreachPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setRegenerateCount(c => c + 1)}
-                    className="flex items-center gap-1.5 text-[11px] font-medium text-stone-500 hover:text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg px-2.5 py-1.5 transition-colors"
+                    className="flex items-center gap-1.5 text-[13px] font-medium text-stone-500 hover:text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg px-2.5 py-1.5 transition-colors"
                   >
                     <RefreshCw size={10} />
                     Regenerate
                   </button>
                   <button
                     onClick={copy}
-                    className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg px-3 py-1.5 transition-colors"
+                    className="flex items-center gap-1.5 text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg px-3 py-1.5 transition-colors"
                   >
                     {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
                     {copied ? 'Copied!' : 'Copy'}

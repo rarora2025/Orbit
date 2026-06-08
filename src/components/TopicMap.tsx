@@ -2,6 +2,7 @@
 
 import { useCRMStore } from '@/lib/store';
 import { topicClusters } from '@/lib/mockData';
+import { companyDisplayName } from '@/lib/companyLogo';
 import { useMemo } from 'react';
 import StatusPill from '@/components/StatusPill';
 import { TrendingUp, AlertTriangle, Minus } from 'lucide-react';
@@ -64,11 +65,11 @@ export default function TopicMap() {
                     <h3 className={`font-bold text-sm ${colors.header}`}>{cluster.name}</h3>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${strengthColor}`}>
+                    <span className={`inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full border ${strengthColor}`}>
                       <StrengthIcon size={9} />
                       {cluster.strength.charAt(0).toUpperCase() + cluster.strength.slice(1)}
                     </span>
-                    <span className={`${colors.badge} text-[10px] font-bold px-2 py-0.5 rounded-full`}>
+                    <span className={`${colors.badge} text-[12px] font-bold px-2 py-0.5 rounded-full`}>
                       {cluster.contactObjects.length}
                     </span>
                   </div>
@@ -81,7 +82,7 @@ export default function TopicMap() {
                 {cluster.contactObjects.length === 0 ? (
                   <div className="py-4 text-center">
                     <p className="text-xs text-stone-400">No contacts in this cluster yet</p>
-                    <p className="text-[10px] text-stone-300 mt-0.5">Add contacts with this topic tag</p>
+                    <p className="text-[12px] text-stone-300 mt-0.5">Add contacts with this topic tag</p>
                   </div>
                 ) : (
                   cluster.contactObjects.map(contact => (
@@ -97,7 +98,7 @@ export default function TopicMap() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-stone-800 truncate">{contact.name}</p>
-                            <p className="text-[10px] text-stone-500 truncate">{contact.role} · {contact.company}</p>
+                            <p className="text-[12px] text-stone-500 truncate">{contact.role} · {companyDisplayName(contact.company)}</p>
                           </div>
                         </div>
                         <StatusPill status={contact.status} size="sm" />
@@ -128,7 +129,7 @@ export default function TopicMap() {
                 </div>
                 <div>
                   <p className={`text-xs font-semibold ${item.color}`}>{item.strength}</p>
-                  <p className="text-[10px] text-stone-500 leading-relaxed mt-0.5">{item.desc}</p>
+                  <p className="text-[12px] text-stone-500 leading-relaxed mt-0.5">{item.desc}</p>
                 </div>
               </div>
             );

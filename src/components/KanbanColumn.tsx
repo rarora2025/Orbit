@@ -73,10 +73,10 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
         <div>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
-            <span className="text-[13px] font-semibold text-stone-800">{status}</span>
-            <span className="text-[12px] text-stone-400 font-medium">{contacts.length}</span>
+            <span className="text-[15px] font-semibold text-stone-800">{status}</span>
+            <span className="text-[14px] text-stone-400 font-medium">{contacts.length}</span>
           </div>
-          <p className="text-[11px] text-stone-400 mt-0.5 ml-[14px]">{config.subtitle}</p>
+          <p className="text-[13px] text-stone-400 mt-0.5 ml-[14px]">{config.subtitle}</p>
         </div>
         <button
           onClick={onAdd}
@@ -99,7 +99,7 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
           <div className={`border border-dashed rounded-xl h-16 flex items-center justify-center transition-colors ${
             isDragOver ? 'border-orange-300 bg-orange-50/60' : 'border-stone-200'
           }`}>
-            <span className="text-[11px] text-stone-300">{isDragOver ? 'Drop here' : 'Empty'}</span>
+            <span className="text-[13px] text-stone-300">{isDragOver ? 'Drop here' : 'Empty'}</span>
           </div>
         ) : (
           contacts.map((contact, i) => (

@@ -44,7 +44,7 @@ export default function NextMovesPage() {
 
     // Send first messages
     contacts
-      .filter(c => c.status === 'To Send')
+      .filter(c => c.status === 'Send')
       .forEach(c => {
         urgent.push({
           id: `send-${c.id}`,
@@ -57,7 +57,7 @@ export default function NextMovesPage() {
 
     // Deepen responded
     contacts
-      .filter(c => c.status === 'Responded' && getDaysSince(c.lastContacted) > 14)
+      .filter(c => c.status === 'Response' && getDaysSince(c.lastContacted) > 14)
       .forEach(c => {
         urgent.push({
           id: `deepen-${c.id}`,
@@ -159,7 +159,7 @@ export default function NextMovesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-sm font-semibold text-stone-800">{move.action}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${config.bg} ${config.color} ${config.border}`}>
+                      <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${config.bg} ${config.color} ${config.border}`}>
                         {config.label}
                       </span>
                     </div>
@@ -176,7 +176,7 @@ export default function NextMovesPage() {
                   {/* View button */}
                   <button
                     onClick={() => selectContact(move.contact.id)}
-                    className="opacity-0 group-hover:opacity-100 text-[10px] font-medium text-stone-500 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1.5 rounded-lg transition-all flex-shrink-0"
+                    className="opacity-0 group-hover:opacity-100 text-[12px] font-medium text-stone-500 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1.5 rounded-lg transition-all flex-shrink-0"
                   >
                     View →
                   </button>
@@ -241,7 +241,7 @@ export default function NextMovesPage() {
                 <ArrowRight size={12} className="text-violet-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-stone-800">{gap.role}</p>
-                  <p className="text-[10px] text-stone-500 mt-0.5">{gap.reason}</p>
+                  <p className="text-[12px] text-stone-500 mt-0.5">{gap.reason}</p>
                 </div>
               </div>
             ))}
