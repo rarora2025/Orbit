@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Star } from 'lucide-react';
 
 interface Props {
   contact: Contact;
@@ -16,22 +16,12 @@ interface Props {
 }
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
-const SCORE_BASE: Record<Contact['warmth'], number> = { Low: 50, Medium: 68, High: 85 };
-
-// AI fit score derived from temperature — base by warmth plus a deterministic
-// per-contact jitter so cards vary but always trend with temp.
-function aiScore(contact: Contact): number {
-  let hash = 0;
-  for (const ch of contact.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return SCORE_BASE[contact.warmth] + (hash % 10);
-}
 
 const MAX_TAGS = 3;
 
 export default function ContactCard({ contact, onClick, isSelected, onDelete, draggable, onDragStart, onDragEnd }: Props) {
   const [dragging, setDragging] = useState(false);
   const temp = TEMP_LEVEL[contact.warmth] ?? 1;
-  const score = aiScore(contact);
   const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
   const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
   const visibleTags = contact.tags.slice(0, MAX_TAGS);
@@ -53,7 +43,7 @@ export default function ContactCard({ contact, onClick, isSelected, onDelete, dr
         dragging ? 'opacity-40 scale-[0.98] shadow-lg rotate-[0.5deg]' : ''
       }`}
     >
-      {/* Header: brand logo · name/role · fit score */}
+      {/* Header: brand logo · name/role · temperature */}
       <div className="flex items-start gap-2.5">
         <CompanyLogo
           company={contact.company}
@@ -70,51 +60,46 @@ export default function ContactCard({ contact, onClick, isSelected, onDelete, dr
           )}
         </div>
         <div
-          className="flex-shrink-0 w-8 h-8 rounded-full border-[1.5px] border-orange-400 flex items-center justify-center"
-          title={`AI fit score ${score} · based on temperature`}
+          className="flex-shrink-0 flex items-center gap-0.5"
+          title={`Temperature: ${contact.warmth}`}
+          aria-label={`Temperature ${contact.warmth}`}
         >
-          <span className="text-[13px] font-bold text-orange-500 leading-none">{score}</span>
+          {[1, 2, 3].map((i) => (
+            <Star
+              key={i}
+              size={13}
+              className={i <= temp ? 'fill-orange-400 text-orange-400' : 'fill-stone-100 text-stone-200'}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Footer: temperature + delete, then AI tags */}
-      <div className="mt-2.5 pt-2.5 border-t border-stone-100">
-        <div className="flex items-center gap-1.5">
-          <span
-            title={`Temperature: ${contact.warmth}`}
-            aria-label={`Temperature ${contact.warmth}`}
-            className="font-bold text-[15px] leading-none tracking-[0.15em] select-none"
-          >
-            <span className="text-orange-500">{'*'.repeat(temp)}</span>
-            <span className="text-stone-300">{'*'.repeat(3 - temp)}</span>
-          </span>
-          {onDelete && (
-            <button
-              type="button"
-              aria-label={`Delete ${contact.name}`}
-              onClick={(e) => { e.stopPropagation(); onDelete(contact.id); }}
-              className="ml-auto p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+      {/* Footer: AI tags + delete */}
+      <div className="mt-2.5 pt-2.5 border-t border-stone-100 flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1 flex-1 min-w-0">
+          {visibleTags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center rounded-full bg-stone-100 text-stone-600 text-[11px] font-medium px-2 py-0.5"
             >
-              <Trash2 size={14} />
-            </button>
+              {tag}
+            </span>
+          ))}
+          {extraTags > 0 && (
+            <span className="inline-flex items-center rounded-full text-stone-400 text-[11px] font-medium px-1 py-0.5">
+              +{extraTags}
+            </span>
           )}
         </div>
-        {visibleTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1 mt-2">
-            {visibleTags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-full bg-stone-100 text-stone-600 text-[11px] font-medium px-2 py-0.5"
-              >
-                {tag}
-              </span>
-            ))}
-            {extraTags > 0 && (
-              <span className="inline-flex items-center rounded-full text-stone-400 text-[11px] font-medium px-1 py-0.5">
-                +{extraTags}
-              </span>
-            )}
-          </div>
+        {onDelete && (
+          <button
+            type="button"
+            aria-label={`Delete ${contact.name}`}
+            onClick={(e) => { e.stopPropagation(); onDelete(contact.id); }}
+            className="flex-shrink-0 p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+          >
+            <Trash2 size={14} />
+          </button>
         )}
       </div>
     </div>
