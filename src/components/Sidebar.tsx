@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, TableProperties } from 'lucide-react';
+import { LayoutGrid, Map } from 'lucide-react';
 import OrbitLogo from './OrbitLogo';
 
-// Topic Map, Next Moves, and Outreach are temporarily removed from the nav —
-// their pages still live under src/app/{map,next-moves,outreach} for a rebuild.
 const navItems = [
-  { href: '/',           icon: LayoutGrid,      label: 'Pipeline'   },
-  { href: '/insights',   icon: TableProperties, label: 'Insights'   },
+  { href: '/',    icon: LayoutGrid, label: 'Pipeline'  },
+  { href: '/map', icon: Map,        label: 'Topic Map' },
 ];
 
 export default function Sidebar() {
