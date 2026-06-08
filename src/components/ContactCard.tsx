@@ -2,7 +2,9 @@
 
 import { Contact } from '@/lib/mockData';
 import { formatShortDate } from '@/lib/utils';
+import { bannerGradient } from '@/lib/cardVisuals';
 import TagChip from './TagChip';
+import CompanyLogo from './CompanyLogo';
 
 function WarmthBars({ warmth }: { warmth: 'Cool' | 'Warm' | 'Hot' }) {
   const filled = warmth === 'Cool' ? 1 : warmth === 'Warm' ? 2 : 3;
@@ -27,6 +29,9 @@ interface Props {
 
 export default function ContactCard({ contact, onClick, isSelected }: Props) {
   const hasAction = !!contact.actionNote;
+  const initials = contact.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
+  const companyInitial = (contact.company || contact.name).charAt(0).toUpperCase();
+  const hasCompany = !!contact.company;
 
   return (
     <div
@@ -37,11 +42,29 @@ export default function ContactCard({ contact, onClick, isSelected }: Props) {
           : 'border-stone-200/60 hover:border-stone-300 hover:shadow-sm'
       } ${hasAction ? 'bg-[#fff7ed]' : 'bg-white'}`}
     >
-      {/* Top row: avatar + name + score */}
-      <div className="flex items-start gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${contact.avatarColor}`}>
-          {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+      {/* Brand banner (only when we have a company) */}
+      {hasCompany && (
+        <div
+          className="-mx-3 -mt-3 mb-2 h-11 rounded-t-xl flex items-center px-3"
+          style={{ background: bannerGradient(contact.name) }}
+        >
+          <CompanyLogo
+            company={contact.company}
+            fallbackInitial={companyInitial}
+            fallbackColor="text-white/90"
+            className="h-5 max-w-[55%]"
+            knockout
+          />
         </div>
+      )}
+
+      {/* Name + (avatar when no banner) + score */}
+      <div className="flex items-start gap-2 mb-2">
+        {!hasCompany && (
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${contact.avatarColor}`}>
+            {initials}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-stone-900 leading-tight truncate">
             {contact.name}
