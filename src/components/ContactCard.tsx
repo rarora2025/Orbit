@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
 import { formatShortDate } from '@/lib/utils';
 import { bannerGradient } from '@/lib/cardVisuals';
@@ -25,36 +26,51 @@ interface Props {
   contact: Contact;
   onClick: () => void;
   isSelected?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
-export default function ContactCard({ contact, onClick, isSelected }: Props) {
+export default function ContactCard({ contact, onClick, isSelected, draggable, onDragStart, onDragEnd }: Props) {
   const hasAction = !!contact.actionNote;
   const initials = contact.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
   const companyInitial = (contact.company || contact.name).charAt(0).toUpperCase();
   const hasCompany = !!contact.company;
+  const [dragging, setDragging] = useState(false);
 
   return (
     <div
       onClick={onClick}
-      className={`rounded-xl p-3 cursor-pointer border transition-all ${
+      draggable={draggable}
+      onDragStart={(e) => { setDragging(true); onDragStart?.(e); }}
+      onDragEnd={(e) => { setDragging(false); onDragEnd?.(e); }}
+      className={`rounded-xl p-3 border transition-all ${
+        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${
         isSelected
           ? 'border-orange-400 ring-1 ring-orange-200 shadow-md'
           : 'border-stone-200/60 hover:border-stone-300 hover:shadow-sm'
-      } ${hasAction ? 'bg-[#fff7ed]' : 'bg-white'}`}
+      } ${hasAction ? 'bg-[#fff7ed]' : 'bg-white'} ${
+        dragging ? 'opacity-40 scale-[0.98] shadow-lg rotate-[0.5deg]' : ''
+      }`}
     >
       {/* Brand banner (only when we have a company) */}
       {hasCompany && (
         <div
-          className="-mx-3 -mt-3 mb-2 h-11 rounded-t-xl flex items-center px-3"
+          className="-mx-3 -mt-3 mb-2 h-11 rounded-t-xl flex items-center gap-2 px-3"
           style={{ background: bannerGradient(contact.name) }}
         >
-          <CompanyLogo
-            company={contact.company}
-            fallbackInitial={companyInitial}
-            fallbackColor="text-white/90"
-            className="h-5 max-w-[55%]"
-            knockout
-          />
+          {/* White chip keeps logos/favicons legible on the gradient — and a
+              clean colored initial when no logo image resolves. */}
+          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+            <CompanyLogo
+              company={contact.company}
+              fallbackInitial={companyInitial}
+              fallbackColor="text-stone-500"
+              className="w-full h-full p-1"
+            />
+          </div>
+          <span className="text-[12px] font-semibold text-white truncate">{contact.company}</span>
         </div>
       )}
 
@@ -69,9 +85,16 @@ export default function ContactCard({ contact, onClick, isSelected }: Props) {
           <p className="text-[13px] font-semibold text-stone-900 leading-tight truncate">
             {contact.name}
           </p>
-          <p className="text-[11px] text-stone-500 leading-tight mt-0.5 truncate">
-            {contact.role}{contact.company ? ` · ${contact.company}` : ''}
-          </p>
+          {(() => {
+            // The banner already shows the company, so the subtitle only needs
+            // the role there; with no banner, fall back to "role · company".
+            const sub = hasCompany
+              ? contact.role
+              : [contact.role, contact.company].filter(Boolean).join(' · ');
+            return sub ? (
+              <p className="text-[11px] text-stone-500 leading-tight mt-0.5 truncate">{sub}</p>
+            ) : null;
+          })()}
         </div>
         <div className="flex-shrink-0 w-[30px] h-[30px] rounded-full border-[1.5px] border-orange-400 flex items-center justify-center ml-1">
           <span className="text-[11px] font-bold text-orange-500 leading-none">{contact.score}</span>

@@ -4,16 +4,26 @@ import { useState, useMemo } from 'react';
 import { useCRMStore } from '@/lib/store';
 import { Status } from '@/lib/mockData';
 import KanbanColumn from '@/components/KanbanColumn';
-import ContactDetailPanel from '@/components/ContactDetailPanel';
-import AddContactModal from '@/components/AddContactModal';
+import ContactTable from '@/components/ContactTable';
+import TopicMap from '@/components/TopicMap';
+import ContactModal from '@/components/ContactModal';
 import { Search, Plus } from 'lucide-react';
 
 const BOARD_STATUSES: Status[] = ['To Send', 'Pending', 'Responded', 'Meeting', 'Ghosted'];
 
+type View = 'board' | 'table' | 'map';
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'board', label: 'Board' },
+  { id: 'table', label: 'Table' },
+  { id: 'map', label: 'Map' },
+];
+
 export default function PipelinePage() {
-  const { contacts, selectedContactId, selectContact, addContact } = useCRMStore();
+  const { contacts, selectedContactId, selectContact, addContact, updateContact, moveContact } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [addStatus, setAddStatus] = useState<Status>('To Send');
+  const [view, setView] = useState<View>('board');
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
 
@@ -35,6 +45,10 @@ export default function PipelinePage() {
     setShowAdd(true);
   }
 
+  function handleMoveContact(contactId: string, status: Status, beforeId: string | null) {
+    moveContact(contactId, status, beforeId);
+  }
+
   return (
     <div className="flex h-full min-h-screen">
       {/* Board + header */}
@@ -49,9 +63,19 @@ export default function PipelinePage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-white border border-stone-200 rounded-xl overflow-hidden text-[12px] font-medium shadow-sm">
-              <button className="px-3 py-1.5 bg-stone-900 text-white">Board</button>
-              <button className="px-3 py-1.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors">Table</button>
-              <button className="px-3 py-1.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors">Map</button>
+              {VIEWS.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setView(v.id)}
+                  className={`px-3 py-1.5 transition-colors ${
+                    view === v.id
+                      ? 'bg-stone-900 text-white'
+                      : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 shadow-sm transition-colors">
               <Search size={12} />
@@ -67,45 +91,59 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {/* Kanban board */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-3 px-4 pt-4 h-full min-w-max">
-            {BOARD_STATUSES.map(status => (
-              <KanbanColumn
-                key={status}
-                status={status}
-                contacts={byStatus[status]}
-                selectedId={selectedContactId}
-                onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
-                onAdd={() => handleAdd(status)}
-              />
-            ))}
-            <div className="w-4 flex-shrink-0" />
+        {/* Board view — one unified scroll area so every column moves together */}
+        {view === 'board' && (
+          <div className="flex-1 overflow-auto overscroll-contain">
+            <div className="flex gap-3 px-4 pt-4 pb-10 w-max mx-auto items-start">
+              {BOARD_STATUSES.map(status => (
+                <KanbanColumn
+                  key={status}
+                  status={status}
+                  contacts={byStatus[status]}
+                  selectedId={selectedContactId}
+                  onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
+                  onAdd={() => handleAdd(status)}
+                  onMoveContact={handleMoveContact}
+                />
+              ))}
+              <div className="w-4 flex-shrink-0" />
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Contact detail drawer — floats over the board so columns aren't cut off */}
-      {selectedContact && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-stone-900/20 animate-backdrop-in"
-            onClick={() => selectContact(null)}
-          />
-          <div className="fixed right-0 top-0 z-50 h-full w-[380px] max-w-[90vw] bg-white border-l border-stone-200/80 shadow-2xl rounded-l-2xl overflow-hidden animate-drawer-in">
-            <ContactDetailPanel
-              contact={selectedContact}
-              onClose={() => selectContact(null)}
+        {/* Table view */}
+        {view === 'table' && (
+          <div className="flex-1 overflow-auto px-6 py-6">
+            <ContactTable
+              contacts={contacts}
+              selectedId={selectedContactId}
+              onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
             />
           </div>
-        </>
-      )}
+        )}
+
+        {/* Map view */}
+        {view === 'map' && (
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <TopicMap />
+          </div>
+        )}
+      </div>
 
       {/* Add modal */}
       {showAdd && (
-        <AddContactModal
+        <ContactModal
           onAdd={(c) => { addContact({ ...c, status: addStatus }); setShowAdd(false); }}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {/* Edit modal — clicking a card reopens the same form, pre-filled */}
+      {!showAdd && selectedContact && (
+        <ContactModal
+          contact={selectedContact}
+          onSave={(id, updates) => { updateContact(id, updates); selectContact(null); }}
+          onClose={() => selectContact(null)}
         />
       )}
     </div>
