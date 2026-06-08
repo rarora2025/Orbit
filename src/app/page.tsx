@@ -6,7 +6,6 @@ import { Status } from '@/lib/mockData';
 import KanbanColumn from '@/components/KanbanColumn';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
 import AddContactModal from '@/components/AddContactModal';
-import IntelligencePanel from '@/components/IntelligencePanel';
 import { Search, Plus } from 'lucide-react';
 
 const BOARD_STATUSES: Status[] = ['To Send', 'Pending', 'Responded', 'Meeting', 'Ghosted'];
@@ -85,9 +84,6 @@ export default function PipelinePage() {
           </div>
         </div>
       </div>
-
-      {/* Intelligence panel (always visible, contact detail slides over it) */}
-      {!selectedContact && <IntelligencePanel />}
 
       {/* Contact detail panel */}
       {selectedContact && (
