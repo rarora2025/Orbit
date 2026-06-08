@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('./chats.actions', () => ({
+  upsertSession: vi.fn(),
+  deleteSession: vi.fn(),
+  listSessions: vi.fn(),
+}));
+
 import { useChatStore } from './chatStore';
 
 beforeEach(() => {
