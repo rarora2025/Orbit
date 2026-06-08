@@ -44,7 +44,7 @@ export default function Sidebar() {
               }`}
             >
               <Icon size={15} className="flex-shrink-0" />
-              <span className="text-[13px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75">
+              <span className="text-[15px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75">
                 {label}
               </span>
             </Link>
@@ -55,11 +55,11 @@ export default function Sidebar() {
       {/* User */}
       <div className="flex items-center gap-3 px-2.5 py-4 border-t border-stone-200/60 flex-shrink-0">
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-[10px] font-semibold">R</span>
+          <span className="text-white text-[12px] font-semibold">R</span>
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75 min-w-0">
-          <p className="text-[12px] font-medium text-stone-700 whitespace-nowrap">Rahul Arora</p>
-          <p className="text-[10px] text-stone-400 whitespace-nowrap">Columbia '25</p>
+          <p className="text-[14px] font-medium text-stone-700 whitespace-nowrap">Rahul Arora</p>
+          <p className="text-[12px] text-stone-400 whitespace-nowrap">Columbia '25</p>
         </div>
       </div>
     </aside>

@@ -10,7 +10,7 @@ export default function PriorityBadge({ priority }: Props) {
   const count = flames[priority] || 1;
 
   return (
-    <span className={`inline-flex items-center gap-1 border rounded-md text-[11px] font-semibold px-2 py-0.5 ${getPriorityColor(priority)}`}>
+    <span className={`inline-flex items-center gap-1 border rounded-md text-[13px] font-semibold px-2 py-0.5 ${getPriorityColor(priority)}`}>
       {priority === 'Dream' ? '✦ Dream' : priority}
     </span>
   );

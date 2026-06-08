@@ -1,88 +1,81 @@
 'use client';
 
+import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
-import { formatShortDate } from '@/lib/utils';
-import TagChip from './TagChip';
-
-function WarmthBars({ warmth }: { warmth: 'Cool' | 'Warm' | 'Hot' }) {
-  const filled = warmth === 'Cool' ? 1 : warmth === 'Warm' ? 2 : 3;
-  return (
-    <div className="flex items-end gap-[2px]">
-      {[1, 2, 3].map(i => (
-        <div
-          key={i}
-          className={`w-[3px] rounded-sm ${i <= filled ? 'bg-orange-400' : 'bg-stone-200'}`}
-          style={{ height: `${4 + i * 2}px` }}
-        />
-      ))}
-    </div>
-  );
-}
+import StatusPill from './StatusPill';
+import PriorityBadge from './PriorityBadge';
+import CompanyLogo from './CompanyLogo';
 
 interface Props {
   contact: Contact;
   onClick: () => void;
   isSelected?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
-export default function ContactCard({ contact, onClick, isSelected }: Props) {
-  const hasAction = !!contact.actionNote;
+const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
+
+export default function ContactCard({ contact, onClick, isSelected, draggable, onDragStart, onDragEnd }: Props) {
+  const [dragging, setDragging] = useState(false);
+  const temp = TEMP_LEVEL[contact.warmth] ?? 1;
+  const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
+  const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
 
   return (
     <div
       onClick={onClick}
-      className={`rounded-xl p-3 cursor-pointer border transition-all ${
+      draggable={draggable}
+      onDragStart={(e) => { setDragging(true); onDragStart?.(e); }}
+      onDragEnd={(e) => { setDragging(false); onDragEnd?.(e); }}
+      className={`contact-card rounded-xl p-3 border bg-white transition-all duration-200 ${
+        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${
         isSelected
           ? 'border-orange-400 ring-1 ring-orange-200 shadow-md'
-          : 'border-stone-200/60 hover:border-stone-300 hover:shadow-sm'
-      } ${hasAction ? 'bg-[#fff7ed]' : 'bg-white'}`}
+          : 'border-stone-200/60 hover:border-stone-300 hover:shadow-md hover:-translate-y-0.5'
+      } ${
+        dragging ? 'opacity-40 scale-[0.98] shadow-lg rotate-[0.5deg]' : ''
+      }`}
     >
-      {/* Top row: avatar + name + score */}
-      <div className="flex items-start gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${contact.avatarColor}`}>
-          {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-        </div>
+      {/* Header: brand logo · name/role · fit score */}
+      <div className="flex items-start gap-2.5">
+        <CompanyLogo
+          company={contact.company}
+          fallbackInitial={initial}
+          fallbackColor={contact.company ? 'bg-stone-100 text-stone-500' : contact.avatarColor}
+          className="w-9 h-9 rounded-lg border border-stone-200 flex-shrink-0 p-1"
+        />
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-stone-900 leading-tight truncate">
+          <p className="text-[15px] font-semibold text-stone-900 leading-tight truncate">
             {contact.name}
           </p>
-          <p className="text-[11px] text-stone-500 leading-tight mt-0.5 truncate">
-            {contact.role}{contact.company ? ` · ${contact.company}` : ''}
-          </p>
+          {subtitle && (
+            <p className="text-[13px] text-stone-500 leading-tight truncate mt-0.5">{subtitle}</p>
+          )}
         </div>
-        <div className="flex-shrink-0 w-[30px] h-[30px] rounded-full border-[1.5px] border-orange-400 flex items-center justify-center ml-1">
-          <span className="text-[11px] font-bold text-orange-500 leading-none">{contact.score}</span>
+        <div
+          className="flex-shrink-0 w-8 h-8 rounded-full border-[1.5px] border-orange-400 flex items-center justify-center"
+          title={`Fit score ${contact.score}`}
+        >
+          <span className="text-[13px] font-bold text-orange-500 leading-none">{contact.score}</span>
         </div>
       </div>
 
-      {/* Tags */}
-      {contact.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {contact.tags.slice(0, 2).map(tag => <TagChip key={tag} tag={tag} />)}
-        </div>
-      )}
-
-      {/* Warmth + last contact */}
-      <div className="flex items-center gap-1.5">
-        <WarmthBars warmth={contact.warmth} />
-        <span className={`text-[11px] font-medium ${
-          contact.warmth === 'Hot' ? 'text-orange-600'
-          : contact.warmth === 'Warm' ? 'text-amber-600'
-          : 'text-stone-500'
-        }`}>
-          {contact.warmth}
+      {/* Footer: status · priority · temperature */}
+      <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-stone-100">
+        <StatusPill status={contact.status} size="sm" />
+        <PriorityBadge priority={contact.priority} />
+        <span
+          title={`Temperature: ${contact.warmth}`}
+          aria-label={`Temperature ${contact.warmth}`}
+          className="ml-auto pl-1 font-bold text-[15px] leading-none tracking-[0.15em] select-none"
+        >
+          <span className="text-orange-500">{'*'.repeat(temp)}</span>
+          <span className="text-stone-300">{'*'.repeat(3 - temp)}</span>
         </span>
-        <span className="text-stone-300 text-[11px]">·</span>
-        <span className="text-[11px] text-stone-400">last {formatShortDate(contact.lastContacted)}</span>
       </div>
-
-      {/* Action note */}
-      {hasAction && (
-        <div className="mt-2 flex items-start gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-[4px] flex-shrink-0" />
-          <p className="text-[11px] text-stone-700 leading-relaxed">{contact.actionNote}</p>
-        </div>
-      )}
     </div>
   );
 }
