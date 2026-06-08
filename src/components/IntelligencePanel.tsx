@@ -19,12 +19,12 @@ export default function IntelligencePanel() {
       {/* Header */}
       <div className="px-4 py-4 border-b border-stone-200/60">
         <div className="flex items-center gap-2 mb-0.5">
-          <div className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center flex-shrink-0">
             <Zap size={11} className="text-white" fill="white" />
           </div>
-          <span className="text-[13px] font-bold text-stone-900">Relationship Intelligence</span>
+          <span className="text-[13px] font-bold text-stone-900">Network Insights</span>
         </div>
-        <p className="text-[11px] text-stone-400 ml-7">{contacts.length} contacts · live read</p>
+        <p className="text-[11px] text-stone-400 ml-7">Relationship Intelligence · {contacts.length} contacts</p>
       </div>
 
       {/* Network read */}
