@@ -4,6 +4,11 @@ import { useState } from 'react';
 import { Contact, Status, columnConfig } from '@/lib/mockData';
 import ContactCard from './ContactCard';
 
+// Thin drop-target line shown between cards while dragging.
+function Indicator() {
+  return <div className="h-0.5 rounded-full bg-orange-400 shadow-[0_0_0_3px_rgba(251,146,60,0.15)]" />;
+}
+
 interface Props {
   status: Status;
   contacts: Contact[];
@@ -61,9 +66,6 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
   }
 
   const isDragOver = dropIndex !== null;
-  const Indicator = () => (
-    <div className="h-0.5 rounded-full bg-orange-400 shadow-[0_0_0_3px_rgba(251,146,60,0.15)]" />
-  );
 
   return (
     <div className="w-[300px] flex-shrink-0 flex flex-col h-full px-4">

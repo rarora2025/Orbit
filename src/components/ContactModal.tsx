@@ -108,7 +108,8 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     for (let i = 0; i < form.name.length; i++) nameHash = form.name.charCodeAt(i) + ((nameHash << 5) - nameHash);
 
     const newContact: Contact = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
+      position: 0, // placeholder; the store/server assigns the real column position
       name: form.name.trim(),
       company: form.company.trim(),
       role: form.role.trim(),

@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import * as api from './chats.actions';
 
 // Messages store contact *ids* (not full objects) so they stay in sync with the
 // CRM store and survive serialization; the UI re-resolves them at render time.
@@ -19,6 +19,7 @@ export interface ChatSession {
 interface ChatStore {
   sessions: ChatSession[];
   activeId: string | null;
+  setSessions: (sessions: ChatSession[]) => void;
   newChat: () => void;
   selectChat: (id: string) => void;
   deleteChat: (id: string) => void;
@@ -27,48 +28,48 @@ interface ChatStore {
   addAssistantMessage: (sessionId: string, msg: Extract<StoredMsg, { role: 'assistant' }>) => void;
 }
 
-export const useChatStore = create<ChatStore>()(
-  persist(
-    (set, get) => ({
-      sessions: [],
-      activeId: null,
-      newChat: () => set({ activeId: null }),
-      selectChat: (id) => set({ activeId: id }),
-      deleteChat: (id) =>
-        set((s) => ({
-          sessions: s.sessions.filter((x) => x.id !== id),
-          activeId: s.activeId === id ? null : s.activeId,
-        })),
-      addUserMessage: (text) => {
-        const s = get();
-        const existing = s.activeId && s.sessions.find((x) => x.id === s.activeId);
-        if (existing) {
-          set({
-            sessions: s.sessions.map((x) =>
-              x.id === existing.id
-                ? { ...x, messages: [...x.messages, { role: 'user', text }], updatedAt: Date.now() }
-                : x,
-            ),
-          });
-          return existing.id;
-        }
-        const id = Date.now().toString();
-        const session: ChatSession = {
-          id,
-          title: text.length > 40 ? text.slice(0, 40).trimEnd() + '…' : text,
-          messages: [{ role: 'user', text }],
-          updatedAt: Date.now(),
-        };
-        set({ sessions: [session, ...s.sessions], activeId: id });
-        return id;
-      },
-      addAssistantMessage: (sessionId, msg) =>
-        set((s) => ({
-          sessions: s.sessions.map((x) =>
-            x.id === sessionId ? { ...x, messages: [...x.messages, msg], updatedAt: Date.now() } : x,
-          ),
-        })),
-    }),
-    { name: 'orbit-chats', version: 1, storage: createJSONStorage(() => localStorage) },
-  ),
-);
+export const useChatStore = create<ChatStore>()((set, get) => ({
+  sessions: [],
+  activeId: null,
+  setSessions: (sessions) => set({ sessions }),
+  newChat: () => set({ activeId: null }),
+  selectChat: (id) => set({ activeId: id }),
+  deleteChat: (id) => {
+    set((s) => ({
+      sessions: s.sessions.filter((x) => x.id !== id),
+      activeId: s.activeId === id ? null : s.activeId,
+    }));
+    void api.deleteSession(id).catch(console.error);
+  },
+  addUserMessage: (text) => {
+    const s = get();
+    const existing = s.activeId ? s.sessions.find((x) => x.id === s.activeId) : undefined;
+    if (existing) {
+      const updated = { ...existing, messages: [...existing.messages, { role: 'user' as const, text }], updatedAt: Date.now() };
+      set({ sessions: s.sessions.map((x) => (x.id === existing.id ? updated : x)) });
+      void api.upsertSession(updated).catch(console.error);
+      return existing.id;
+    }
+    const id = crypto.randomUUID();
+    const session: ChatSession = {
+      id,
+      title: text.length > 40 ? text.slice(0, 40).trimEnd() + '…' : text,
+      messages: [{ role: 'user', text }],
+      updatedAt: Date.now(),
+    };
+    set({ sessions: [session, ...s.sessions], activeId: id });
+    void api.upsertSession(session).catch(console.error);
+    return id;
+  },
+  addAssistantMessage: (sessionId, msg) => {
+    const updated = get().sessions
+      .map((x) => (x.id === sessionId ? { ...x, messages: [...x.messages, msg], updatedAt: Date.now() } : x))
+      .find((x) => x.id === sessionId);
+    set((s) => ({
+      sessions: s.sessions.map((x) =>
+        x.id === sessionId ? { ...x, messages: [...x.messages, msg], updatedAt: Date.now() } : x,
+      ),
+    }));
+    if (updated) void api.upsertSession(updated).catch(console.error);
+  },
+}));

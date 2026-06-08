@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, MessageCircle, ChevronDown } from 'lucide-react';
+import { LayoutGrid, MessageCircle } from 'lucide-react';
+import { UserButton, useUser } from '@clerk/nextjs';
 import OrbitLogo from './OrbitLogo';
 
 const navItems = [
@@ -43,19 +44,23 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Profile — placeholder until Clerk is wired up */}
-      <button
-        type="button"
-        className="ml-auto flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-white/60 transition-colors flex-shrink-0"
-      >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-[11px] font-semibold">R</span>
-        </div>
-        <span className="hidden sm:block text-[13px] font-medium text-stone-700 whitespace-nowrap leading-none">
-          Rahul Arora
-        </span>
-        <ChevronDown size={14} className="text-stone-400 flex-shrink-0" />
-      </button>
+      {/* Profile */}
+      <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        <UserName />
+        <UserButton
+          appearance={{ elements: { rootBox: 'w-7 h-7', avatarBox: 'w-7 h-7' } }}
+        />
+      </div>
     </header>
+  );
+}
+
+function UserName() {
+  const { user } = useUser();
+  if (!user) return null;
+  return (
+    <span className="hidden sm:block text-[13px] font-medium text-stone-700 whitespace-nowrap leading-none">
+      {user.fullName ?? user.primaryEmailAddress?.emailAddress ?? 'Account'}
+    </span>
   );
 }
