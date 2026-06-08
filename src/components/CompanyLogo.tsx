@@ -1,0 +1,58 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { companyLogoUrl, faviconUrl } from '@/lib/companyLogo';
+
+interface Props {
+  company: string;
+  /** Single-letter fallback shown when no logo resolves. */
+  fallbackInitial: string;
+  /** Tailwind classes for the fallback initial block (bg + text color). */
+  fallbackColor: string;
+  /** Tailwind sizing/shape classes applied to the logo + fallback box. */
+  className?: string;
+  /** White-knockout the logo so it reads on a dark banner. */
+  knockout?: boolean;
+}
+
+/**
+ * Renders a company logo, silently degrading: Clearbit logo -> Google favicon
+ * -> a colored initial block. A broken-image icon is never shown.
+ */
+export default function CompanyLogo({
+  company,
+  fallbackInitial,
+  fallbackColor,
+  className = '',
+  knockout = false,
+}: Props) {
+  // stage 0 = Clearbit, 1 = favicon, 2 = initial block
+  const [stage, setStage] = useState(0);
+
+  // Reset to the best source whenever the company changes (live preview).
+  useEffect(() => {
+    setStage(0);
+  }, [company]);
+
+  const logo = companyLogoUrl(company);
+  const favicon = faviconUrl(company);
+  const src = stage === 0 ? logo : stage === 1 ? favicon : '';
+
+  if (!company || !src) {
+    return (
+      <div className={`flex items-center justify-center font-bold ${fallbackColor} ${className}`}>
+        {fallbackInitial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={`${company} logo`}
+      onError={() => setStage((s) => s + 1)}
+      className={`object-contain ${className}`}
+      style={knockout ? { filter: 'brightness(0) invert(1)' } : undefined}
+    />
+  );
+}
