@@ -85,14 +85,20 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Contact detail panel */}
+      {/* Contact detail drawer — floats over the board so columns aren't cut off */}
       {selectedContact && (
-        <div className="w-[300px] flex-shrink-0 border-l border-stone-200/80 overflow-hidden">
-          <ContactDetailPanel
-            contact={selectedContact}
-            onClose={() => selectContact(null)}
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-stone-900/20 animate-backdrop-in"
+            onClick={() => selectContact(null)}
           />
-        </div>
+          <div className="fixed right-0 top-0 z-50 h-full w-[380px] max-w-[90vw] bg-white border-l border-stone-200/80 shadow-2xl rounded-l-2xl overflow-hidden animate-drawer-in">
+            <ContactDetailPanel
+              contact={selectedContact}
+              onClose={() => selectContact(null)}
+            />
+          </div>
+        </>
       )}
 
       {/* Add modal */}
