@@ -3,18 +3,17 @@
 import { useState } from 'react';
 import { Contact, Status, columnConfig } from '@/lib/mockData';
 import ContactCard from './ContactCard';
-import { Plus } from 'lucide-react';
 
 interface Props {
   status: Status;
   contacts: Contact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onAdd?: () => void;
   onMoveContact?: (contactId: string, status: Status, beforeId: string | null) => void;
+  onDelete?: (id: string) => void;
 }
 
-export default function KanbanColumn({ status, contacts, selectedId, onSelect, onAdd, onMoveContact }: Props) {
+export default function KanbanColumn({ status, contacts, selectedId, onSelect, onMoveContact, onDelete }: Props) {
   const config = columnConfig[status] ?? { dot: 'bg-stone-400', subtitle: '' };
   const draggable = !!onMoveContact;
 
@@ -67,23 +66,15 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
   );
 
   return (
-    <div className="w-[252px] flex-shrink-0 flex flex-col">
+    <div className="w-[288px] flex-shrink-0 flex flex-col">
       {/* Header — sticks to the top while the whole board scrolls vertically */}
-      <div className="sticky top-0 z-10 flex items-start justify-between px-0.5 pt-1 pb-2.5 bg-[#faf9f5]/90 backdrop-blur-sm">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
-            <span className="text-[15px] font-semibold text-stone-800">{status}</span>
-            <span className="text-[14px] text-stone-400 font-medium">{contacts.length}</span>
-          </div>
-          <p className="text-[13px] text-stone-400 mt-0.5 ml-[14px]">{config.subtitle}</p>
+      <div className="sticky top-0 z-10 px-0.5 pt-1 pb-2.5 bg-[#faf9f5]/90 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
+          <span className="text-[15px] font-semibold text-stone-800">{status}</span>
+          <span className="text-[14px] text-stone-400 font-medium">{contacts.length}</span>
         </div>
-        <button
-          onClick={onAdd}
-          className="p-1 rounded-lg hover:bg-stone-200 text-stone-400 hover:text-stone-600 transition-colors mt-0.5"
-        >
-          <Plus size={13} />
-        </button>
+        <p className="text-[13px] text-stone-400 mt-0.5 ml-[14px]">{config.subtitle}</p>
       </div>
 
       {/* Cards */}
@@ -113,6 +104,7 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
                 contact={contact}
                 onClick={() => onSelect(contact.id)}
                 isSelected={selectedId === contact.id}
+                onDelete={onDelete}
                 draggable={draggable}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('text/plain', contact.id);

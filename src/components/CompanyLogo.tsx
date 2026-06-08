@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * Renders a company logo, silently degrading: Clearbit logo -> Google favicon
+ * Renders a company logo, silently degrading: site logo -> Google favicon
  * -> a colored initial block. A broken-image icon is never shown.
  */
 export default function CompanyLogo({
@@ -26,7 +26,7 @@ export default function CompanyLogo({
   className = '',
   knockout = false,
 }: Props) {
-  // stage 0 = Clearbit, 1 = favicon, 2 = initial block
+  // stage 0 = site logo, 1 = favicon, 2 = initial block
   const [stage, setStage] = useState(0);
   // Track the last company we rendered for — reset stage synchronously on change
   // (derived-state pattern: avoids useEffect setState triggering cascading renders).
