@@ -18,3 +18,16 @@ export function bannerGradient(name: string): string {
   const [from, to] = GRADIENTS[Math.abs(hash) % GRADIENTS.length];
   return `linear-gradient(120deg, ${from}, ${to})`;
 }
+
+const AVATAR_PALETTE = [
+  'bg-teal-200 text-teal-900', 'bg-orange-200 text-orange-900', 'bg-blue-200 text-blue-900',
+  'bg-emerald-200 text-emerald-900', 'bg-purple-200 text-purple-900', 'bg-rose-200 text-rose-900',
+  'bg-amber-200 text-amber-900', 'bg-cyan-200 text-cyan-900', 'bg-violet-200 text-violet-900',
+];
+
+/** Deterministic avatar background+text classes, indexed by a hash of the name. */
+export function avatarClasses(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
