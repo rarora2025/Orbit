@@ -17,7 +17,7 @@ interface CRMStore {
   selectContact: (id: string | null) => void;
 }
 
-export const useCRMStore = create<CRMStore>()((set, get) => {
+export const useCRMStore = create<CRMStore>()((set) => {
   const upsertLocal = (contact: Contact) =>
     set((s) => ({
       contacts: sortByPosition([

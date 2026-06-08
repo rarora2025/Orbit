@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('./chats.actions', () => ({
-  upsertSession: vi.fn(),
-  deleteSession: vi.fn(),
+  upsertSession: vi.fn(() => Promise.resolve()),
+  deleteSession: vi.fn(() => Promise.resolve()),
   listSessions: vi.fn(),
 }));
 

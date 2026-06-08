@@ -39,7 +39,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       sessions: s.sessions.filter((x) => x.id !== id),
       activeId: s.activeId === id ? null : s.activeId,
     }));
-    void api.deleteSession(id);
+    void api.deleteSession(id).catch(console.error);
   },
   addUserMessage: (text) => {
     const s = get();
@@ -47,7 +47,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
     if (existing) {
       const updated = { ...existing, messages: [...existing.messages, { role: 'user' as const, text }], updatedAt: Date.now() };
       set({ sessions: s.sessions.map((x) => (x.id === existing.id ? updated : x)) });
-      void api.upsertSession(updated);
+      void api.upsertSession(updated).catch(console.error);
       return existing.id;
     }
     const id = crypto.randomUUID();
@@ -58,7 +58,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       updatedAt: Date.now(),
     };
     set({ sessions: [session, ...s.sessions], activeId: id });
-    void api.upsertSession(session);
+    void api.upsertSession(session).catch(console.error);
     return id;
   },
   addAssistantMessage: (sessionId, msg) => {
@@ -70,6 +70,6 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         x.id === sessionId ? { ...x, messages: [...x.messages, msg], updatedAt: Date.now() } : x,
       ),
     }));
-    if (updated) void api.upsertSession(updated);
+    if (updated) void api.upsertSession(updated).catch(console.error);
   },
 }));
