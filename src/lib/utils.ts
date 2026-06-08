@@ -5,7 +5,7 @@ export function getStatusColor(status: Status): string {
     case 'To Send': return 'bg-blue-100 text-blue-700 border-blue-200';
     case 'Pending': return 'bg-amber-100 text-amber-700 border-amber-200';
     case 'Responded': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'Follow-up Needed': return 'bg-orange-100 text-orange-700 border-orange-200';
+    case 'Meeting': return 'bg-violet-100 text-violet-700 border-violet-200';
     case 'Ghosted': return 'bg-red-100 text-red-700 border-red-200';
     case 'Closed': return 'bg-stone-100 text-stone-500 border-stone-200';
     default: return 'bg-stone-100 text-stone-500 border-stone-200';
@@ -17,7 +17,7 @@ export function getStatusDot(status: Status): string {
     case 'To Send': return 'bg-blue-500';
     case 'Pending': return 'bg-amber-500';
     case 'Responded': return 'bg-emerald-500';
-    case 'Follow-up Needed': return 'bg-orange-500';
+    case 'Meeting': return 'bg-violet-500';
     case 'Ghosted': return 'bg-red-500';
     case 'Closed': return 'bg-stone-400';
     default: return 'bg-stone-400';
@@ -42,6 +42,11 @@ export function getPriorityIcon(priority: Priority): string {
     case 'Low': return '—';
     default: return '—';
   }
+}
+
+export function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 export function formatDate(dateStr: string): string {

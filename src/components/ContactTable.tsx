@@ -44,7 +44,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
           {contacts.map((contact) => {
             const days = getDaysSince(contact.lastContacted);
             const isSelected = selectedId === contact.id;
-            const isOverdue = (contact.status === 'Pending' || contact.status === 'Follow-up Needed') && days > 7;
+            const isOverdue = (contact.status === 'Pending' || contact.status === 'Meeting') && days > 7;
 
             return (
               <tr

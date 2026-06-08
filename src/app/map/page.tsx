@@ -35,7 +35,10 @@ export default function MapPage() {
   const clustersWithContacts = useMemo(() => {
     return topicClusters.map(cluster => ({
       ...cluster,
-      contactObjects: contacts.filter(c => cluster.contacts.includes(c.id)),
+      insight: cluster.gap ?? `${cluster.contacts} contacts in this cluster.`,
+      contactObjects: contacts.filter(c =>
+        c.tags.some(t => t.toLowerCase() === cluster.name.toLowerCase())
+      ),
     }));
   }, [contacts]);
 
@@ -54,7 +57,8 @@ export default function MapPage() {
         {/* Cluster grid */}
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
           {clustersWithContacts.map(cluster => {
-            const colors = clusterColors[cluster.color] || clusterColors.blue;
+            const colorKey = cluster.color.replace('bg-', '').replace(/-\d+$/, '');
+            const colors = clusterColors[colorKey] || clusterColors.blue;
             const StrengthIcon = strengthIcons[cluster.strength as keyof typeof strengthIcons];
             const strengthColor = strengthColors[cluster.strength as keyof typeof strengthColors];
 

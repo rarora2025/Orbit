@@ -9,7 +9,7 @@ interface Props {
   onClose: () => void;
 }
 
-const statuses: Status[] = ['To Send', 'Pending', 'Responded', 'Follow-up Needed', 'Ghosted', 'Closed'];
+const statuses: Status[] = ['To Send', 'Pending', 'Responded', 'Meeting', 'Ghosted', 'Closed'];
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Dream'];
 
 function generateAIHints(notes: string, linkedinText: string): { tags: string[]; angle: string } {
@@ -59,6 +59,18 @@ export default function AddContactModal({ onAdd, onClose }: Props) {
     const hints = aiHints || generateAIHints(form.notes, form.linkedinText);
     const tagList = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : hints.tags;
 
+    const avatarPalette = [
+      'bg-teal-200 text-teal-900', 'bg-orange-200 text-orange-900', 'bg-blue-200 text-blue-900',
+      'bg-emerald-200 text-emerald-900', 'bg-purple-200 text-purple-900', 'bg-rose-200 text-rose-900',
+      'bg-amber-200 text-amber-900', 'bg-cyan-200 text-cyan-900', 'bg-violet-200 text-violet-900',
+    ];
+    const priorityScore: Record<Priority, number> = { Dream: 90, High: 78, Medium: 62, Low: 45 };
+    const statusWarmth: Record<Status, 'Cool' | 'Warm' | 'Hot'> = {
+      'To Send': 'Cool', 'Pending': 'Warm', 'Responded': 'Warm', 'Meeting': 'Hot', 'Ghosted': 'Cool', 'Closed': 'Cool',
+    };
+    let nameHash = 0;
+    for (let i = 0; i < form.name.length; i++) nameHash = form.name.charCodeAt(i) + ((nameHash << 5) - nameHash);
+
     const contact: Contact = {
       id: Date.now().toString(),
       name: form.name,
@@ -70,6 +82,9 @@ export default function AddContactModal({ onAdd, onClose }: Props) {
       notes: form.notes,
       status: form.status,
       priority: form.priority,
+      score: priorityScore[form.priority],
+      warmth: statusWarmth[form.status],
+      avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
       tags: tagList,
       lastContacted: new Date().toISOString().split('T')[0],
       nextAction: form.status === 'To Send' ? `Send first message to ${form.name}` : `Follow up with ${form.name}`,
