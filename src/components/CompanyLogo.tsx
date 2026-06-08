@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { companyLogoUrl, faviconUrl } from '@/lib/companyLogo';
 
 interface Props {
@@ -28,11 +28,13 @@ export default function CompanyLogo({
 }: Props) {
   // stage 0 = Clearbit, 1 = favicon, 2 = initial block
   const [stage, setStage] = useState(0);
-
-  // Reset to the best source whenever the company changes (live preview).
-  useEffect(() => {
+  // Track the last company we rendered for — reset stage synchronously on change
+  // (derived-state pattern: avoids useEffect setState triggering cascading renders).
+  const [prevCompany, setPrevCompany] = useState(company);
+  if (prevCompany !== company) {
+    setPrevCompany(company);
     setStage(0);
-  }, [company]);
+  }
 
   const logo = companyLogoUrl(company);
   const favicon = faviconUrl(company);
