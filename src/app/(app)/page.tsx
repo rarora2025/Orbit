@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react';
 const BOARD_STATUSES: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
 
 export default function PipelinePage() {
-  const { contacts, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact } = useCRMStore();
+  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
@@ -25,6 +25,19 @@ export default function PipelinePage() {
 
   function handleMoveContact(contactId: string, status: Status, beforeId: string | null) {
     moveContact(contactId, status, beforeId);
+  }
+
+  // Hold the board until the first server hydration lands, so a returning user
+  // doesn't see a flash of empty columns before their contacts load.
+  if (!loaded) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center">
+        <div className="flex items-center gap-2 text-stone-400 text-sm">
+          <span className="w-4 h-4 rounded-full border-2 border-stone-300 border-t-orange-400 animate-spin" />
+          Loading your pipeline…
+        </div>
+      </div>
+    );
   }
 
   return (
