@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
-import StatusPill from './StatusPill';
 import CompanyLogo from './CompanyLogo';
+import { Trash2 } from 'lucide-react';
 
 interface Props {
   contact: Contact;
   onClick: () => void;
   isSelected?: boolean;
+  onDelete?: (id: string) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
@@ -27,7 +28,7 @@ function aiScore(contact: Contact): number {
 
 const MAX_TAGS = 3;
 
-export default function ContactCard({ contact, onClick, isSelected, draggable, onDragStart, onDragEnd }: Props) {
+export default function ContactCard({ contact, onClick, isSelected, onDelete, draggable, onDragStart, onDragEnd }: Props) {
   const [dragging, setDragging] = useState(false);
   const temp = TEMP_LEVEL[contact.warmth] ?? 1;
   const score = aiScore(contact);
@@ -42,7 +43,7 @@ export default function ContactCard({ contact, onClick, isSelected, draggable, o
       draggable={draggable}
       onDragStart={(e) => { setDragging(true); onDragStart?.(e); }}
       onDragEnd={(e) => { setDragging(false); onDragEnd?.(e); }}
-      className={`contact-card rounded-xl p-3 border bg-white transition-all duration-200 ${
+      className={`contact-card group relative rounded-xl p-3 border bg-white transition-all duration-200 ${
         draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       } ${
         isSelected
@@ -76,18 +77,27 @@ export default function ContactCard({ contact, onClick, isSelected, draggable, o
         </div>
       </div>
 
-      {/* Footer: status + temperature, then AI tags */}
+      {/* Footer: temperature + delete, then AI tags */}
       <div className="mt-2.5 pt-2.5 border-t border-stone-100">
         <div className="flex items-center gap-1.5">
-          <StatusPill status={contact.status} size="sm" />
           <span
             title={`Temperature: ${contact.warmth}`}
             aria-label={`Temperature ${contact.warmth}`}
-            className="ml-auto pl-1 font-bold text-[15px] leading-none tracking-[0.15em] select-none"
+            className="font-bold text-[15px] leading-none tracking-[0.15em] select-none"
           >
             <span className="text-orange-500">{'*'.repeat(temp)}</span>
             <span className="text-stone-300">{'*'.repeat(3 - temp)}</span>
           </span>
+          {onDelete && (
+            <button
+              type="button"
+              aria-label={`Delete ${contact.name}`}
+              onClick={(e) => { e.stopPropagation(); onDelete(contact.id); }}
+              className="ml-auto p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
         {visibleTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 mt-2">

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, Status, Priority } from '@/lib/mockData';
-import { X } from 'lucide-react';
+import { Contact, Status, Warmth } from '@/lib/mockData';
+import { X, Star } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
 
 interface Props {
@@ -16,12 +16,11 @@ interface Props {
 }
 
 const statuses: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
-const priorities: Priority[] = ['Low', 'Medium', 'High', 'Dream'];
 
-const priorityScore: Record<Priority, number> = { Dream: 90, High: 78, Medium: 62, Low: 45 };
-const statusWarmth: Record<Status, 'Low' | 'Medium' | 'High'> = {
-  'Send': 'Low', 'Pending': 'Medium', 'Response': 'High', 'Ghosted': 'Low',
-};
+// Temperature maps to the `warmth` DB field. 3 stars = Low / Medium / High.
+const warmths: Warmth[] = ['Low', 'Medium', 'High'];
+const warmthLevel: Record<Warmth, number> = { Low: 1, Medium: 2, High: 3 };
+const warmthScore: Record<Warmth, number> = { Low: 45, Medium: 62, High: 85 };
 const avatarPalette = [
   'bg-teal-200 text-teal-900', 'bg-orange-200 text-orange-900', 'bg-blue-200 text-blue-900',
   'bg-emerald-200 text-emerald-900', 'bg-purple-200 text-purple-900', 'bg-rose-200 text-rose-900',
@@ -34,7 +33,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     name: contact?.name ?? '',
     company: contact?.company ?? '',
     status: contact?.status ?? ('Send' as Status),
-    priority: contact?.priority ?? ('Medium' as Priority),
+    warmth: contact?.warmth ?? ('Medium' as Warmth),
   });
 
   function handleChange(key: string, value: string) {
@@ -52,9 +51,8 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
         name: form.name.trim(),
         company: form.company.trim(),
         status: form.status,
-        priority: form.priority,
-        score: priorityScore[form.priority],
-        warmth: statusWarmth[form.status],
+        warmth: form.warmth,
+        score: warmthScore[form.warmth],
       });
       return;
     }
@@ -74,9 +72,9 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       inquiry: '',
       notes: '',
       status: form.status,
-      priority: form.priority,
-      score: priorityScore[form.priority],
-      warmth: statusWarmth[form.status],
+      priority: 'Medium',
+      score: warmthScore[form.warmth],
+      warmth: form.warmth,
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
       tags: [],
       lastContacted: new Date().toISOString().split('T')[0],
@@ -140,26 +138,29 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
             </select>
           </div>
 
-          {/* Priority / Temperature */}
+          {/* Temperature — star rating mapped to the warmth field */}
           <div>
-            <label className={labelClass}>Priority / Temperature</label>
-            <div className="grid grid-cols-4 gap-2">
-              {priorities.map(p => (
-                <button
-                  key={p} type="button"
-                  onClick={() => handleChange('priority', p)}
-                  className={`py-2 rounded-lg text-xs font-semibold border transition-all ${
-                    form.priority === p
-                      ? p === 'Dream' ? 'bg-violet-600 text-white border-violet-600' :
-                        p === 'High' ? 'bg-rose-500 text-white border-rose-500' :
-                        p === 'Medium' ? 'bg-amber-500 text-white border-amber-500' :
-                        'bg-stone-400 text-white border-stone-400'
-                      : 'bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  {p === 'Dream' ? '✦ Dream' : p}
-                </button>
-              ))}
+            <label className={labelClass}>Temperature</label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                {warmths.map(w => {
+                  const filled = warmthLevel[form.warmth] >= warmthLevel[w];
+                  return (
+                    <button
+                      key={w} type="button"
+                      onClick={() => handleChange('warmth', w)}
+                      aria-label={`${w} temperature`}
+                      className="p-0.5 transition-transform hover:scale-110"
+                    >
+                      <Star
+                        size={28}
+                        className={filled ? 'fill-orange-400 text-orange-400' : 'fill-stone-100 text-stone-300'}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-sm font-medium text-stone-500">{form.warmth}</span>
             </div>
           </div>
         </form>
