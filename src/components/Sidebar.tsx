@@ -2,24 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, TableProperties, Map, Plus, ArrowRight } from 'lucide-react';
+import { LayoutGrid, TableProperties } from 'lucide-react';
 import OrbitLogo from './OrbitLogo';
 
+// Topic Map, Next Moves, and Outreach are temporarily removed from the nav —
+// their pages still live under src/app/{map,next-moves,outreach} for a rebuild.
 const navItems = [
   { href: '/',           icon: LayoutGrid,      label: 'Pipeline'   },
   { href: '/insights',   icon: TableProperties, label: 'Insights'   },
-  { href: '/map',        icon: Map,             label: 'Topic Map'  },
-  { href: '/next-moves', icon: Plus,            label: 'Next Moves' },
-  { href: '/outreach',   icon: ArrowRight,      label: 'Outreach'   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen z-40 flex flex-col bg-[#faf9f5] border-r border-stone-200/80 overflow-hidden w-12 hover:w-52 transition-[width] duration-200 ease-out group">
+    <aside className="fixed left-2.5 top-2.5 bottom-2.5 z-40 flex flex-col rounded-[1.75rem] bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/50 ring-1 ring-black/5 shadow-xl shadow-stone-500/15 overflow-hidden w-14 hover:w-56 transition-[width] duration-300 ease-out group">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-2.5 py-4 border-b border-stone-200/60 flex-shrink-0">
+      <div className="flex items-center gap-3 px-3 py-4 border-b border-white/40 flex-shrink-0">
         <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
           <OrbitLogo size={26} />
         </div>
@@ -37,10 +36,10 @@ export default function Sidebar() {
               key={href}
               href={href}
               title={label}
-              className={`flex items-center gap-3 px-1.5 py-2 rounded-lg transition-all duration-150 min-w-0 ${
+              className={`flex items-center gap-3 px-2 py-2 rounded-xl transition-all duration-150 min-w-0 ${
                 active
-                  ? 'bg-stone-900 text-white shadow-sm'
-                  : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+                  ? 'bg-stone-900/90 text-white shadow-md shadow-stone-900/20'
+                  : 'text-stone-500 hover:text-stone-800 hover:bg-white/60'
               }`}
             >
               <Icon size={15} className="flex-shrink-0" />
@@ -53,7 +52,7 @@ export default function Sidebar() {
       </nav>
 
       {/* User */}
-      <div className="flex items-center gap-3 px-2.5 py-4 border-t border-stone-200/60 flex-shrink-0">
+      <div className="flex items-center gap-3 px-3 py-4 border-t border-white/40 flex-shrink-0">
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
           <span className="text-white text-[12px] font-semibold">R</span>
         </div>
