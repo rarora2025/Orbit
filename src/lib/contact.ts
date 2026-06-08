@@ -1,6 +1,8 @@
 // Core contact model. Deliberately minimal: only the fields that matter, with
 // score / temperature / tags produced by the AI signals generator (see
 // contactSignals.ts) rather than entered by hand.
+// Migration note: this slim type replaces the legacy Contact in mockData.ts;
+// some files still import from mockData.ts and are being moved onto this module.
 export type Status = 'Send' | 'Pending' | 'Response' | 'Ghosted';
 export type Temperature = 'Low' | 'Medium' | 'High';
 

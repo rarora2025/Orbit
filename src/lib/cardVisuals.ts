@@ -1,3 +1,10 @@
+/** djb2-style hash of a name, used to deterministically index visual palettes. */
+function nameHash(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return hash;
+}
+
 const GRADIENTS: [string, string][] = [
   ['#1e3a8a', '#3b82f6'],
   ['#7c2d12', '#ea580c'],
@@ -11,10 +18,7 @@ const GRADIENTS: [string, string][] = [
 
 /** Deterministic per-contact banner gradient, indexed by a hash of the name. */
 export function bannerGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  const hash = nameHash(name);
   const [from, to] = GRADIENTS[Math.abs(hash) % GRADIENTS.length];
   return `linear-gradient(120deg, ${from}, ${to})`;
 }
@@ -27,7 +31,6 @@ const AVATAR_PALETTE = [
 
 /** Deterministic avatar background+text classes, indexed by a hash of the name. */
 export function avatarClasses(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const hash = nameHash(name);
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }

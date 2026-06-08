@@ -20,4 +20,7 @@ describe('avatarClasses', () => {
   it('returns a tailwind bg+text class pair', () => {
     expect(avatarClasses('Ada')).toMatch(/^bg-.+ text-.+$/);
   });
+  it('pins palette index for Shayne Coplan to catch reordering', () => {
+    expect(avatarClasses('Shayne Coplan')).toBe('bg-violet-200 text-violet-900');
+  });
 });

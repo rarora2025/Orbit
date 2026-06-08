@@ -6,7 +6,7 @@ const STEP = 1000;
 export function appendPosition(contacts: Contact[], status: Status): number {
   const inColumn = contacts.filter(c => c.status === status);
   if (inColumn.length === 0) return STEP;
-  return Math.max(...inColumn.map(c => c.position)) + STEP;
+  return inColumn.reduce((m, c) => Math.max(m, c.position), 0) + STEP;
 }
 
 /**
@@ -33,6 +33,9 @@ export function positionBefore(
   }
   const prev = idx === 0 ? 0 : column[idx - 1].position;
   const next = column[idx].position;
+  // Fractional indexing: midpoint between neighbours. Gaps shrink with each
+  // successive insert at the same spot; at CRM column sizes this is safe, but
+  // a future rebalance pass would be needed before ~50 repeated mid-inserts.
   return (prev + next) / 2;
 }
 
