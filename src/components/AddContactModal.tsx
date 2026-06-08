@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Contact, Status, Priority } from '@/lib/mockData';
+import { resolveAutoName } from '@/lib/linkedin';
 import { X, Sparkles } from 'lucide-react';
+import CompanyLogo from './CompanyLogo';
 
 interface Props {
   onAdd: (contact: Contact) => void;
@@ -43,7 +45,14 @@ export default function AddContactModal({ onAdd, onClose }: Props) {
   const [aiHints, setAiHints] = useState<{ tags: string[]; angle: string } | null>(null);
 
   function handleChange(key: string, value: string) {
-    setForm(f => ({ ...f, [key]: value }));
+    setForm(f => {
+      const next = { ...f, [key]: value };
+      // When the LinkedIn URL changes, auto-fill the name if it's still blank.
+      if (key === 'linkedinUrl') {
+        next.name = resolveAutoName(f.name, value);
+      }
+      return next;
+    });
   }
 
   function runAI() {
@@ -125,7 +134,15 @@ export default function AddContactModal({ onAdd, onClose }: Props) {
             </div>
             <div>
               <label className={labelClass}>Company *</label>
-              <input className={inputClass} placeholder="Polymarket" required value={form.company} onChange={e => handleChange('company', e.target.value)} />
+              <div className="flex items-center gap-2">
+                <CompanyLogo
+                  company={form.company}
+                  fallbackInitial={(form.company || '?').charAt(0).toUpperCase()}
+                  fallbackColor="bg-stone-100 text-stone-400"
+                  className="w-9 h-9 rounded-lg border border-stone-200 flex-shrink-0"
+                />
+                <input className={inputClass} placeholder="Polymarket" required value={form.company} onChange={e => handleChange('company', e.target.value)} />
+              </div>
             </div>
           </div>
 
