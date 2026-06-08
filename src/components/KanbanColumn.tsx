@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function KanbanColumn({ status, contacts, selectedId, onSelect, onMoveContact, onDelete }: Props) {
-  const config = columnConfig[status] ?? { dot: 'bg-stone-400', subtitle: '' };
+  const config = columnConfig[status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' };
   const draggable = !!onMoveContact;
 
   // Index in `contacts` where a dropped card would be inserted (0..length), or null.
@@ -66,23 +66,24 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
   );
 
   return (
-    <div className="w-[288px] flex-shrink-0 flex flex-col">
-      {/* Header — sticks to the top while the whole board scrolls vertically */}
-      <div className="sticky top-0 z-10 px-0.5 pt-1 pb-2.5 bg-[#faf9f5]/90 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5">
+    <div className="w-[300px] flex-shrink-0 flex flex-col h-full px-4">
+      {/* Header — a tinted pill so it reads clearly as a section, not a card */}
+      <div className="flex-shrink-0 pt-5 pb-3">
+        <div className={`inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-full ${config.bg}`}>
           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
-          <span className="text-[15px] font-semibold text-stone-800">{status}</span>
-          <span className="text-[14px] text-stone-400 font-medium">{contacts.length}</span>
+          <span className={`text-[13px] font-semibold ${config.text}`}>{status}</span>
+          <span className={`text-[11px] font-semibold ${config.text} bg-white/70 rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none`}>
+            {contacts.length}
+          </span>
         </div>
-        <p className="text-[13px] text-stone-400 mt-0.5 ml-[14px]">{config.subtitle}</p>
       </div>
 
-      {/* Cards */}
+      {/* Cards — each column scrolls on its own */}
       <div
         onDragOver={handleContainerDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`space-y-2 pb-4 min-h-[60px] rounded-xl transition-colors ${
+        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2 pb-6 pr-0.5 rounded-xl transition-colors ${
           isDragOver ? 'bg-orange-50/50' : ''
         }`}
       >

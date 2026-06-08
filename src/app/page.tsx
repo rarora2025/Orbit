@@ -28,11 +28,11 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="flex h-full min-h-screen">
-      {/* Board — fills the full height now that the top bar is gone */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-auto overscroll-contain">
-          <div className="flex gap-3 px-4 pt-5 pb-10 w-max mx-auto items-start">
+    <div className="flex h-full min-h-0">
+      {/* Board sits on an elevated card so it lifts off the page background */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40">
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-contain">
+          <div className="flex h-full px-2 divide-x divide-stone-200/70">
             {BOARD_STATUSES.map(status => (
               <KanbanColumn
                 key={status}
@@ -44,7 +44,6 @@ export default function PipelinePage() {
                 onDelete={deleteContact}
               />
             ))}
-            <div className="w-4 flex-shrink-0" />
           </div>
         </div>
       </div>

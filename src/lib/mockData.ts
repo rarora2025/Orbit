@@ -511,11 +511,11 @@ export const mockContacts: Contact[] = [
   },
 ];
 
-export const columnConfig: Record<string, { dot: string; subtitle: string }> = {
-  'Send':     { dot: 'bg-blue-500',    subtitle: 'Not reached out yet' },
-  'Pending':  { dot: 'bg-yellow-400',  subtitle: 'Awaiting reply' },
-  'Response': { dot: 'bg-emerald-500', subtitle: 'They replied' },
-  'Ghosted':  { dot: 'bg-red-500',     subtitle: 'Gone cold' },
+export const columnConfig: Record<string, { dot: string; bg: string; text: string }> = {
+  'Send':     { dot: 'bg-blue-500',    bg: 'bg-blue-50',    text: 'text-blue-700'    },
+  'Pending':  { dot: 'bg-yellow-400',  bg: 'bg-amber-50',   text: 'text-amber-700'   },
+  'Response': { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  'Ghosted':  { dot: 'bg-red-500',     bg: 'bg-red-50',     text: 'text-red-700'     },
 };
 
 export const topicClusters = [
