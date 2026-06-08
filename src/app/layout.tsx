@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -19,15 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
-      <body className="h-full bg-[#faf9f5] font-sans">
-        <div className="flex flex-col h-full">
-          <Sidebar />
-          <main className="flex-1 mt-[4.75rem] px-3 pb-3 flex flex-col min-h-0 overflow-hidden">
-            {children}
-          </main>
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${geist.variable} h-full antialiased`}>
+        <body className="h-full bg-[#faf9f5] font-sans">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }
