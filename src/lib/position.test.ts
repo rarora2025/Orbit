@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { appendPosition, positionBefore, sortByPosition } from './position';
-import type { Contact } from './contact';
 
-function c(id: string, status: Contact['status'], position: number): Contact {
+function c(id: string, status: string, position: number) {
   return { id, name: id, company: '', status, score: 0, temperature: 'Medium', tags: [], position };
 }
 
