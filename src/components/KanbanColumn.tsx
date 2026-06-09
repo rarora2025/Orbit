@@ -14,11 +14,12 @@ interface Props {
   contacts: Contact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onEdit?: (id: string) => void;
   onMoveContact?: (contactId: string, status: Status, beforeId: string | null) => void;
   onDelete?: (id: string) => void;
 }
 
-export default function KanbanColumn({ status, contacts, selectedId, onSelect, onMoveContact, onDelete }: Props) {
+export default function KanbanColumn({ status, contacts, selectedId, onSelect, onEdit, onMoveContact, onDelete }: Props) {
   const config = columnConfig[status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' };
   const draggable = !!onMoveContact;
 
@@ -68,9 +69,9 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
   const isDragOver = dropIndex !== null;
 
   return (
-    <div className="w-[300px] flex-shrink-0 flex flex-col h-full px-4">
+    <div className="flex-1 min-h-0 flex flex-col">
       {/* Header — a tinted pill so it reads clearly as a section, not a card */}
-      <div className="flex-shrink-0 pt-5 pb-3">
+      <div className="flex-shrink-0 pt-4 pb-3">
         <div className={`inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-full ${config.bg}`}>
           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
           <span className={`text-[13px] font-semibold ${config.text}`}>{status}</span>
@@ -107,6 +108,7 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
                 contact={contact}
                 onClick={() => onSelect(contact.id)}
                 isSelected={selectedId === contact.id}
+                onEdit={onEdit}
                 onDelete={onDelete}
                 draggable={draggable}
                 onDragStart={(e) => {

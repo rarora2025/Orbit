@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, Status, Warmth } from '@/lib/mockData';
-import { X, Sparkles, Loader2, Plus } from 'lucide-react';
+import { Contact, Warmth } from '@/lib/mockData';
+import { X } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
 
 interface Props {
@@ -15,7 +15,6 @@ interface Props {
   onSave?: (id: string, updates: Partial<Contact>) => void;
 }
 
-const statuses: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
 const warmths: Warmth[] = ['Low', 'Medium', 'High'];
 const warmthScore: Record<Warmth, number> = { Low: 45, Medium: 62, High: 85 };
 const avatarPalette = [
@@ -23,27 +22,11 @@ const avatarPalette = [
   'bg-emerald-200 text-emerald-900', 'bg-purple-200 text-purple-900', 'bg-rose-200 text-rose-900',
   'bg-amber-200 text-amber-900', 'bg-cyan-200 text-cyan-900', 'bg-violet-200 text-violet-900',
 ];
-
-// Candidate tags the "AI" draws from. In a real build this is a model call;
-// here we derive a stable, plausible set from the person's name + company.
-const TAG_POOL = [
-  'Founder', 'Operator', 'Investor', 'VC', 'Angel', 'Engineering', 'Product',
-  'Growth', 'Design', 'Prediction Markets', 'Sports Betting', 'Fantasy Sports',
-  'Crypto', 'Fintech', 'Policy', 'Legal', 'AI/ML', 'Alumni', 'Warm Intro',
+// Common reasons to track someone — power the goals datalist.
+const GOAL_SUGGESTIONS = [
+  'DraftIQ advice', 'Internship help', 'Founder mentor', 'Investor',
+  'Professor / research', 'Customer discovery', 'Friend / classmate',
 ];
-
-function suggestTags(seed: string, exclude: string[]): string[] {
-  let hash = 0;
-  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  const pool = TAG_POOL.filter((t) => !exclude.includes(t));
-  const out: string[] = [];
-  let h = hash || 1;
-  while (out.length < 3 && pool.length) {
-    h = (h * 1103515245 + 12345) >>> 0;
-    out.push(pool.splice(h % pool.length, 1)[0]);
-  }
-  return out;
-}
 
 export default function ContactModal({ onClose, contact, onAdd, onSave }: Props) {
   const isEdit = !!contact;
@@ -51,40 +34,14 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     name: contact?.name ?? '',
     role: contact?.role ?? '',
     company: contact?.company ?? '',
-    status: contact?.status ?? ('Send' as Status),
+    relationshipGoal: contact?.relationshipGoal ?? '',
+    email: contact?.email ?? '',
+    linkedinUrl: contact?.linkedinUrl ?? '',
     warmth: contact?.warmth ?? ('Medium' as Warmth),
-    tags: contact?.tags ?? ([] as string[]),
   });
-  const [tagInput, setTagInput] = useState('');
-  const [generating, setGenerating] = useState(false);
 
   function handleChange(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  function addTag(raw: string) {
-    const t = raw.trim();
-    if (!t) return;
-    setForm((f) => (f.tags.includes(t) ? f : { ...f, tags: [...f.tags, t] }));
-    setTagInput('');
-  }
-
-  function removeTag(tag: string) {
-    setForm((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }));
-  }
-
-  function generateTags() {
-    if (generating) return;
-    setGenerating(true);
-    const seed = `${form.name}|${form.company}`;
-    // Brief delay so the action reads as an AI request, with a spinner.
-    setTimeout(() => {
-      setForm((f) => ({
-        ...f,
-        tags: Array.from(new Set([...f.tags, ...suggestTags(seed + f.tags.join(','), f.tags)])),
-      }));
-      setGenerating(false);
-    }, 900);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -92,14 +49,17 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     if (!form.name.trim()) return;
 
     if (isEdit && contact) {
+      // Status and tags are intentionally not edited here — status is set by
+      // dragging on the board; tags are reserved for the future graph.
       onSave?.(contact.id, {
         name: form.name.trim(),
         role: form.role.trim(),
         company: form.company.trim(),
-        status: form.status,
+        relationshipGoal: form.relationshipGoal.trim(),
+        email: form.email.trim(),
+        linkedinUrl: form.linkedinUrl.trim(),
         warmth: form.warmth,
         score: warmthScore[form.warmth],
-        tags: form.tags,
       });
       return;
     }
@@ -113,18 +73,19 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       name: form.name.trim(),
       company: form.company.trim(),
       role: form.role.trim(),
-      linkedinUrl: '',
-      email: '',
+      linkedinUrl: form.linkedinUrl.trim(),
+      email: form.email.trim(),
       inquiry: '',
       notes: '',
-      status: form.status,
+      status: 'Send', // new people enter at the top of the pipeline; drag to move
+      relationshipGoal: form.relationshipGoal.trim(),
       priority: 'Medium',
       score: warmthScore[form.warmth],
       warmth: form.warmth,
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
-      tags: form.tags,
+      tags: [],
       lastContacted: new Date().toISOString().split('T')[0],
-      nextAction: form.status === 'Send' ? `Send first message to ${form.name.trim()}` : `Follow up with ${form.name.trim()}`,
+      nextAction: `Send first message to ${form.name.trim()}`,
       aiSummary: '',
       outreachAngle: '',
       suggestedMessage: '',
@@ -143,9 +104,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden border border-stone-200 animate-modal-in">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 flex-shrink-0">
-          <div>
-            <h2 className="font-bold text-stone-900 text-lg">{isEdit ? 'Edit Person' : 'Add Person'}</h2>
-          </div>
+          <h2 className="font-bold text-stone-900 text-lg">{isEdit ? 'Edit Person' : 'Add Person'}</h2>
           <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-colors">
             <X size={18} />
           </button>
@@ -179,15 +138,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
             </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className={labelClass}>Status</label>
-            <select className={inputClass} value={form.status} onChange={e => handleChange('status', e.target.value)}>
-              {statuses.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-
-          {/* Temperature — segmented control, consistent with the rest of the form */}
+          {/* Temperature — segmented control */}
           <div>
             <label className={labelClass}>Temperature</label>
             <div className="grid grid-cols-3 gap-2">
@@ -212,56 +163,41 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
             </div>
           </div>
 
-          {/* Tags — with AI generation */}
+          {/* Goals */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className={`${labelClass} mb-0`}>Tags</label>
-              <button
-                type="button"
-                onClick={generateTags}
-                disabled={generating}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 disabled:opacity-60 transition-colors"
-              >
-                {generating
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : <Sparkles size={13} />}
-                {generating ? 'Generating…' : 'Generate with AI'}
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 p-2 min-h-[42px] focus-within:border-orange-400 focus-within:ring-1 focus-within:ring-orange-400/20 transition-colors">
-              {form.tags.map(tag => (
-                <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 text-xs font-medium pl-2.5 pr-1 py-1">
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    aria-label={`Remove ${tag}`}
-                    className="rounded-full p-0.5 hover:bg-orange-200/70 text-orange-500 hover:text-orange-700 transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
+            <label className={labelClass}>Goals</label>
+            <input
+              className={inputClass}
+              list="relationship-goals"
+              placeholder="Why do you care about this person?"
+              value={form.relationshipGoal}
+              onChange={e => handleChange('relationshipGoal', e.target.value)}
+            />
+            <datalist id="relationship-goals">
+              {GOAL_SUGGESTIONS.map(g => <option key={g} value={g} />)}
+            </datalist>
+          </div>
+
+          {/* Contact — points of contact, surfaced on cards and in next moves */}
+          <div className="space-y-3 pt-1">
+            <p className={labelClass}>Contact</p>
+            <div>
               <input
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput); }
-                  else if (e.key === 'Backspace' && !tagInput && form.tags.length) removeTag(form.tags[form.tags.length - 1]);
-                }}
-                placeholder={form.tags.length ? 'Add tag…' : 'Type a tag or generate with AI'}
-                className="flex-1 min-w-[90px] bg-transparent text-sm text-stone-800 placeholder-stone-400 focus:outline-none px-1 py-0.5"
+                type="email"
+                className={inputClass}
+                placeholder="Email address"
+                value={form.email}
+                onChange={e => handleChange('email', e.target.value)}
               />
-              {tagInput.trim() && (
-                <button
-                  type="button"
-                  onClick={() => addTag(tagInput)}
-                  aria-label="Add tag"
-                  className="rounded-md p-1 text-stone-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                >
-                  <Plus size={14} />
-                </button>
-              )}
+            </div>
+            <div>
+              <input
+                type="url"
+                className={inputClass}
+                placeholder="LinkedIn URL"
+                value={form.linkedinUrl}
+                onChange={e => handleChange('linkedinUrl', e.target.value)}
+              />
             </div>
           </div>
         </form>
