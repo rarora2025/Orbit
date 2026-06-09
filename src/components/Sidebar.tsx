@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, MessageCircle } from 'lucide-react';
+import { LayoutGrid, MessageCircle, Compass } from 'lucide-react';
 import { UserButton, useUser } from '@clerk/nextjs';
 import OrbitLogo from './OrbitLogo';
 
 const navItems = [
-  { href: '/',          icon: MessageCircle, label: 'Chat'      },
+  { href: '/',          icon: Compass,       label: 'Insights'  },
+  { href: '/chat',      icon: MessageCircle, label: 'Chat'      },
   { href: '/dashboard', icon: LayoutGrid,    label: 'Dashboard' },
 ];
 

@@ -2,30 +2,28 @@
 
 import { useState, useMemo } from 'react';
 import { useCRMStore } from '@/lib/store';
-import { Status } from '@/lib/mockData';
+import { BOARD_STATUSES, BOARD_COLUMNS } from '@/lib/mockData';
 import KanbanColumn from '@/components/KanbanColumn';
 import ContactModal from '@/components/ContactModal';
+import ContactDetailPanel from '@/components/ContactDetailPanel';
+import DraftModal from '@/components/DraftModal';
+import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
-
-const BOARD_STATUSES: Status[] = ['Send', 'Pending', 'Response', 'Ghosted'];
 
 export default function PipelinePage() {
   const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const composer = useDraftComposer();
 
-  const selectedContact = contacts.find(c => c.id === selectedContactId);
+  const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
+  const editingContact = contacts.find(c => c.id === editingId) ?? null;
 
   const byStatus = useMemo(() => {
-    const map: Record<Status, typeof contacts> = {
-      'Send': [], 'Pending': [], 'Response': [], 'Ghosted': [],
-    };
+    const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
     for (const c of contacts) map[c.status]?.push(c);
     return map;
   }, [contacts]);
-
-  function handleMoveContact(contactId: string, status: Status, beforeId: string | null) {
-    moveContact(contactId, status, beforeId);
-  }
 
   // Hold the board until the first server hydration lands, so a returning user
   // doesn't see a flash of empty columns before their contacts load.
@@ -42,26 +40,40 @@ export default function PipelinePage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Board sits on an elevated card so it lifts off the page background */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40">
+      {/* Board — columns flex to fill the width; opening the panel just shrinks
+          them. Horizontal scroll only kicks in once columns hit their min width. */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40">
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-contain">
-          <div className="flex h-full px-2 divide-x divide-stone-200/70">
-            {BOARD_STATUSES.map(status => (
-              <KanbanColumn
-                key={status}
-                status={status}
-                contacts={byStatus[status]}
-                selectedId={selectedContactId}
-                onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
-                onMoveContact={handleMoveContact}
-                onDelete={deleteContact}
-              />
+          <div className="flex h-full min-w-full divide-x divide-stone-200/70">
+            {BOARD_COLUMNS.map(group => (
+              <div key={group.key} className="flex-1 min-w-[208px] flex flex-col min-h-0 px-3 divide-y divide-stone-200/60">
+                {group.statuses.map(status => (
+                  <KanbanColumn
+                    key={status}
+                    status={status}
+                    contacts={byStatus[status]}
+                    selectedId={selectedContactId}
+                    onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
+                    onEdit={(id) => setEditingId(id)}
+                    onMoveContact={(contactId, s, beforeId) => moveContact(contactId, s, beforeId)}
+                    onDelete={deleteContact}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Single unified add button — replaces the old header + per-column adds */}
+      {/* Detail side panel — slides in and pushes the board over */}
+      <ContactDetailPanel
+        contact={selectedContact}
+        onClose={() => selectContact(null)}
+        onEdit={(id) => setEditingId(id)}
+        onDraft={(opts) => composer.open({ ...opts, kind: 'message' })}
+      />
+
+      {/* Single unified add button */}
       <button
         onClick={() => setShowAdd(true)}
         className="fixed bottom-6 right-6 z-30 flex items-center gap-2 px-5 py-3 text-sm font-semibold text-white bg-orange-500 rounded-full shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition active:scale-95"
@@ -78,12 +90,22 @@ export default function PipelinePage() {
         />
       )}
 
-      {/* Edit modal — clicking a card reopens the same form, pre-filled */}
-      {!showAdd && selectedContact && (
+      {/* Edit modal — opened from the card's pencil button or the detail panel */}
+      {editingContact && (
         <ContactModal
-          contact={selectedContact}
-          onSave={(id, updates) => { updateContact(id, updates); selectContact(null); }}
-          onClose={() => selectContact(null)}
+          contact={editingContact}
+          onSave={(id, updates) => { updateContact(id, updates); setEditingId(null); }}
+          onClose={() => setEditingId(null)}
+        />
+      )}
+
+      {/* Draft composer */}
+      {composer.state && (
+        <DraftModal
+          title={composer.state.title}
+          draft={composer.state.draft}
+          loading={composer.state.loading}
+          onClose={composer.close}
         />
       )}
     </div>

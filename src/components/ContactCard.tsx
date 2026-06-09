@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
-import { Trash2, Star } from 'lucide-react';
+import { Trash2, Star, Pencil, Mail } from 'lucide-react';
+import LinkedInIcon from './LinkedInIcon';
 
 interface Props {
   contact: Contact;
   onClick: () => void;
   isSelected?: boolean;
+  onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
@@ -17,15 +19,11 @@ interface Props {
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-const MAX_TAGS = 3;
-
-export default function ContactCard({ contact, onClick, isSelected, onDelete, draggable, onDragStart, onDragEnd }: Props) {
+export default function ContactCard({ contact, onClick, isSelected, onEdit, onDelete, draggable, onDragStart, onDragEnd }: Props) {
   const [dragging, setDragging] = useState(false);
   const temp = TEMP_LEVEL[contact.warmth] ?? 1;
   const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
   const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
-  const visibleTags = contact.tags.slice(0, MAX_TAGS);
-  const extraTags = contact.tags.length - visibleTags.length;
 
   return (
     <div
@@ -74,23 +72,42 @@ export default function ContactCard({ contact, onClick, isSelected, onDelete, dr
         </div>
       </div>
 
-      {/* Footer: AI tags + delete */}
+      {/* Footer: quick links to reach them + edit/delete */}
       <div className="mt-2.5 pt-2.5 border-t border-stone-100 flex items-center gap-1.5">
-        <div className="flex flex-wrap items-center gap-1 flex-1 min-w-0">
-          {visibleTags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center rounded-full bg-stone-100 text-stone-600 text-[11px] font-medium px-2 py-0.5"
+        <div className="flex items-center gap-0.5 flex-1 min-w-0">
+          {contact.linkedinUrl && (
+            <a
+              href={contact.linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`${contact.name} on LinkedIn`}
+              className="p-1 rounded-md text-stone-400 hover:bg-[#0A66C2]/10 hover:text-[#0A66C2] transition-colors"
             >
-              {tag}
-            </span>
-          ))}
-          {extraTags > 0 && (
-            <span className="inline-flex items-center rounded-full text-stone-400 text-[11px] font-medium px-1 py-0.5">
-              +{extraTags}
-            </span>
+              <LinkedInIcon size={14} />
+            </a>
+          )}
+          {contact.email && (
+            <a
+              href={`mailto:${contact.email}`}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Email ${contact.name}`}
+              className="p-1 rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
+            >
+              <Mail size={14} />
+            </a>
           )}
         </div>
+        {onEdit && (
+          <button
+            type="button"
+            aria-label={`Edit ${contact.name}`}
+            onClick={(e) => { e.stopPropagation(); onEdit(contact.id); }}
+            className="flex-shrink-0 p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-orange-50 hover:text-orange-500 transition-all"
+          >
+            <Pencil size={14} />
+          </button>
+        )}
         {onDelete && (
           <button
             type="button"
