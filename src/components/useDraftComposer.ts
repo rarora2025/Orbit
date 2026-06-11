@@ -34,6 +34,9 @@ const DEFAULT_CHANNEL: Channel = 'Email';
 export function useDraftComposer() {
   const [state, setState] = useState<ComposerState | null>(null);
   const reqId = useRef(0);
+  // Latest generation params, mirrored in a ref so the stable setTone/setChannel
+  // callbacks can re-generate without closing over stale state. Written atomically
+  // with setState inside generate(), so it can't diverge from `state`.
   const ctx = useRef<{ contact: Contact; kind: MoveKind | 'message'; tone: Tone; channel: Channel } | null>(null);
 
   const generate = useCallback((contact: Contact, kind: MoveKind | 'message', tone: Tone, channel: Channel) => {
