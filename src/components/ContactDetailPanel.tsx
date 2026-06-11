@@ -12,11 +12,12 @@ interface Props {
   onClose: () => void;
   onEdit: (id: string) => void;
   onDraft: (contact: Contact) => void;
+  onLogResponse: (contact: Contact) => void;
 }
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }: Props) {
+export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft, onLogResponse }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
   // React's endorsed pattern for deriving from a changing prop.
@@ -124,13 +125,24 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
                     {followUp && (
                       <p className="text-[12px] font-medium text-orange-600 mt-1.5">{followUp}</p>
                     )}
-                    <button
-                      type="button"
-                      onClick={draftNextAction}
-                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-[13px] font-semibold rounded-lg hover:bg-orange-600 transition active:scale-95 shadow-sm shadow-orange-500/30"
-                    >
-                      Draft message
-                    </button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={draftNextAction}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-[13px] font-semibold rounded-lg hover:bg-orange-600 transition active:scale-95 shadow-sm shadow-orange-500/30"
+                      >
+                        Draft message
+                      </button>
+                      {c.status === 'Pending' && (
+                        <button
+                          type="button"
+                          onClick={() => onLogResponse(c)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-600 text-[13px] font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition active:scale-95"
+                        >
+                          Log response
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </Section>
 

@@ -7,17 +7,20 @@ import KanbanColumn from '@/components/KanbanColumn';
 import ContactModal from '@/components/ContactModal';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
 import DraftModal from '@/components/DraftModal';
+import LogResponseModal from '@/components/LogResponseModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
-  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact, saveDraft, markSent } = useCRMStore();
+  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact, saveDraft, markSent, logResponse } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
   const composer = useDraftComposer();
 
   const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
   const editingContact = contacts.find(c => c.id === editingId) ?? null;
+  const respondingContact = contacts.find(c => c.id === respondingId) ?? null;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
@@ -71,6 +74,7 @@ export default function PipelinePage() {
         onClose={() => selectContact(null)}
         onEdit={(id) => setEditingId(id)}
         onDraft={(contact) => composer.open({ contact })}
+        onLogResponse={(contact) => setRespondingId(contact.id)}
       />
 
       {/* Single unified add button */}
@@ -112,6 +116,15 @@ export default function PipelinePage() {
           onSaveDraft={(input) => saveDraft(composer.state!.contact.id, input)}
           onMarkSent={(input) => markSent(composer.state!.contact.id, input)}
           onClose={composer.close}
+        />
+      )}
+
+      {/* Log response modal */}
+      {respondingContact && (
+        <LogResponseModal
+          contactName={respondingContact.name}
+          onSave={(input) => logResponse(respondingContact.id, input)}
+          onClose={() => setRespondingId(null)}
         />
       )}
     </div>
