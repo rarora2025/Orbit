@@ -8,19 +8,34 @@ import ContactModal from '@/components/ContactModal';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
 import DraftModal from '@/components/DraftModal';
 import LogResponseModal from '@/components/LogResponseModal';
+import ScheduleMeetingModal from '@/components/ScheduleMeetingModal';
+import MarkMetModal from '@/components/MarkMetModal';
+import AddNoteModal from '@/components/AddNoteModal';
+import SetFollowUpModal from '@/components/SetFollowUpModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
-  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact, saveDraft, markSent, logResponse } = useCRMStore();
+  const {
+    contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
+    saveDraft, markSent, logResponse, scheduleMeeting, markMet, addNote, setFollowUp, moveToLongTerm, markGhosted,
+  } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [metId, setMetId] = useState<string | null>(null);
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const [followUpId, setFollowUpId] = useState<string | null>(null);
   const composer = useDraftComposer();
 
   const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
   const editingContact = contacts.find(c => c.id === editingId) ?? null;
   const respondingContact = contacts.find(c => c.id === respondingId) ?? null;
+  const meetingContact = contacts.find(c => c.id === meetingId) ?? null;
+  const metContact = contacts.find(c => c.id === metId) ?? null;
+  const noteContact = contacts.find(c => c.id === noteId) ?? null;
+  const followUpContact = contacts.find(c => c.id === followUpId) ?? null;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
@@ -75,6 +90,12 @@ export default function PipelinePage() {
         onEdit={(id) => setEditingId(id)}
         onDraft={(contact) => composer.open({ contact })}
         onLogResponse={(contact) => setRespondingId(contact.id)}
+        onScheduleMeeting={(contact) => setMeetingId(contact.id)}
+        onMarkMet={(contact) => setMetId(contact.id)}
+        onAddNote={(contact) => setNoteId(contact.id)}
+        onSetFollowUp={(contact) => setFollowUpId(contact.id)}
+        onMoveToLongTerm={(contact) => moveToLongTerm(contact.id)}
+        onMarkGhosted={(contact) => markGhosted(contact.id)}
       />
 
       {/* Single unified add button */}
@@ -125,6 +146,42 @@ export default function PipelinePage() {
           contactName={respondingContact.name}
           onSave={(input) => logResponse(respondingContact.id, input)}
           onClose={() => setRespondingId(null)}
+        />
+      )}
+
+      {/* Schedule meeting modal */}
+      {meetingContact && (
+        <ScheduleMeetingModal
+          contactName={meetingContact.name}
+          onSave={(input) => scheduleMeeting(meetingContact.id, input)}
+          onClose={() => setMeetingId(null)}
+        />
+      )}
+
+      {/* Mark as met modal */}
+      {metContact && (
+        <MarkMetModal
+          contactName={metContact.name}
+          onSave={(input) => markMet(metContact.id, input)}
+          onClose={() => setMetId(null)}
+        />
+      )}
+
+      {/* Add note modal */}
+      {noteContact && (
+        <AddNoteModal
+          contactName={noteContact.name}
+          onSave={(content) => addNote(noteContact.id, content)}
+          onClose={() => setNoteId(null)}
+        />
+      )}
+
+      {/* Set follow-up modal */}
+      {followUpContact && (
+        <SetFollowUpModal
+          contactName={followUpContact.name}
+          onSave={(input) => setFollowUp(followUpContact.id, input)}
+          onClose={() => setFollowUpId(null)}
         />
       )}
     </div>

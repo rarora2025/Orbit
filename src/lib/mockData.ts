@@ -14,7 +14,8 @@ export interface Interaction {
   date: string;
   type:
     | 'sent' | 'received' | 'note' | 'meeting'
-    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled' | 'response_logged';
+    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled' | 'response_logged'
+    | 'meeting_scheduled' | 'meeting_completed' | 'note_added' | 'status_changed';
   channel?: string;
   content: string;
   /** Optional captured next step (e.g. "Schedule meeting"), shown as a chip. */
@@ -109,7 +110,9 @@ export const INTERACTION_LABEL: Record<string, string> = {
   follow_up_scheduled: 'Follow-up scheduled',
   response_logged: 'Response logged',
   meeting_scheduled: 'Meeting scheduled',
+  meeting_completed: 'Meeting completed',
   note_added: 'Note added',
+  status_changed: 'Status changed',
   sent: 'Sent',
   received: 'Received',
   note: 'Note',

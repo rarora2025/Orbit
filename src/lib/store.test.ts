@@ -9,6 +9,11 @@ vi.mock('./contacts.actions', () => ({
   addDraftInteraction: vi.fn(),
   markMessageSent: vi.fn(),
   logResponse: vi.fn(),
+  scheduleMeeting: vi.fn(),
+  markMet: vi.fn(),
+  addNote: vi.fn(),
+  setFollowUp: vi.fn(),
+  changeStatusLogged: vi.fn(),
 }));
 
 import { useCRMStore } from './store';
@@ -70,5 +75,51 @@ describe('useCRMStore interactions', () => {
     const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
     expect(updated?.status).toBe('Response');
     expect(updated?.interactions).toHaveLength(1);
+  });
+
+  it('scheduleMeeting upserts the returned contact (moving it to Meeting Scheduled)', async () => {
+    const scheduled = c('a', 'Meeting Scheduled', 1000);
+    scheduled.interactions = [{ id: 'm1', date: '2026-06-11', type: 'meeting_scheduled', content: 'Meeting scheduled for June 18 at 2:00 PM.' }];
+    (api.scheduleMeeting as ReturnType<typeof vi.fn>).mockResolvedValue(scheduled);
+    useCRMStore.setState({ contacts: [c('a', 'Response', 1000)], loaded: true });
+    await useCRMStore.getState().scheduleMeeting('a', { date: '2026-06-18', time: '14:00', notes: '' });
+    expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Meeting Scheduled');
+  });
+
+  it('markMet upserts the returned contact (moving it to Met)', async () => {
+    const met = c('a', 'Met', 1000);
+    (api.markMet as ReturnType<typeof vi.fn>).mockResolvedValue(met);
+    useCRMStore.setState({ contacts: [c('a', 'Meeting Scheduled', 1000)], loaded: true });
+    await useCRMStore.getState().markMet('a', { notes: 'went well' });
+    expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Met');
+  });
+
+  it('addNote upserts the returned contact without changing status', async () => {
+    const noted = c('a', 'Met', 1000);
+    noted.interactions = [{ id: 'n1', date: '2026-06-11', type: 'note_added', content: 'a note' }];
+    (api.addNote as ReturnType<typeof vi.fn>).mockResolvedValue(noted);
+    useCRMStore.setState({ contacts: [c('a', 'Met', 1000)], loaded: true });
+    await useCRMStore.getState().addNote('a', 'a note');
+    const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
+    expect(updated?.status).toBe('Met');
+    expect(updated?.interactions).toHaveLength(1);
+  });
+
+  it('moveToLongTerm calls changeStatusLogged with Long-term and upserts', async () => {
+    const moved = c('a', 'Long-term', 1000);
+    (api.changeStatusLogged as ReturnType<typeof vi.fn>).mockResolvedValue(moved);
+    useCRMStore.setState({ contacts: [c('a', 'Response', 1000)], loaded: true });
+    await useCRMStore.getState().moveToLongTerm('a');
+    expect(api.changeStatusLogged).toHaveBeenCalledWith('a', 'Long-term', 'Moved to long-term');
+    expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Long-term');
+  });
+
+  it('markGhosted calls changeStatusLogged with Ghosted and upserts', async () => {
+    const ghosted = c('a', 'Ghosted', 1000);
+    (api.changeStatusLogged as ReturnType<typeof vi.fn>).mockResolvedValue(ghosted);
+    useCRMStore.setState({ contacts: [c('a', 'Pending', 1000)], loaded: true });
+    await useCRMStore.getState().markGhosted('a');
+    expect(api.changeStatusLogged).toHaveBeenCalledWith('a', 'Ghosted', 'Marked as ghosted');
+    expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Ghosted');
   });
 });

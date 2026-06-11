@@ -13,11 +13,28 @@ interface Props {
   onEdit: (id: string) => void;
   onDraft: (contact: Contact) => void;
   onLogResponse: (contact: Contact) => void;
+  onScheduleMeeting: (contact: Contact) => void;
+  onMarkMet: (contact: Contact) => void;
+  onAddNote: (contact: Contact) => void;
+  onSetFollowUp: (contact: Contact) => void;
+  onMoveToLongTerm: (contact: Contact) => void;
+  onMarkGhosted: (contact: Contact) => void;
 }
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft, onLogResponse }: Props) {
+/** Statuses that can still be parked in Long-term. */
+const LONG_TERM_FROM: Contact['status'][] = ['Response', 'Meeting Scheduled', 'Met', 'Ghosted'];
+
+const ORANGE_OUTLINE_BTN =
+  'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-600 text-[13px] font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition active:scale-95';
+const STONE_OUTLINE_BTN =
+  'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-stone-600 text-[13px] font-semibold rounded-lg border border-stone-200 hover:bg-stone-50 transition active:scale-95';
+
+export default function ContactDetailPanel({
+  contact, onClose, onEdit, onDraft, onLogResponse,
+  onScheduleMeeting, onMarkMet, onAddNote, onSetFollowUp, onMoveToLongTerm, onMarkGhosted,
+}: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
   // React's endorsed pattern for deriving from a changing prop.
@@ -134,15 +151,40 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft, 
                         Draft message
                       </button>
                       {c.status === 'Pending' && (
-                        <button
-                          type="button"
-                          onClick={() => onLogResponse(c)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-600 text-[13px] font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition active:scale-95"
-                        >
+                        <button type="button" onClick={() => onLogResponse(c)} className={ORANGE_OUTLINE_BTN}>
                           Log response
                         </button>
                       )}
+                      {c.status === 'Response' && (
+                        <button type="button" onClick={() => onScheduleMeeting(c)} className={ORANGE_OUTLINE_BTN}>
+                          Schedule meeting
+                        </button>
+                      )}
+                      {c.status === 'Meeting Scheduled' && (
+                        <button type="button" onClick={() => onMarkMet(c)} className={ORANGE_OUTLINE_BTN}>
+                          Mark as met
+                        </button>
+                      )}
+                      {c.status === 'Pending' && (
+                        <button type="button" onClick={() => onMarkGhosted(c)} className={STONE_OUTLINE_BTN}>
+                          Mark ghosted
+                        </button>
+                      )}
+                      {LONG_TERM_FROM.includes(c.status) && (
+                        <button type="button" onClick={() => onMoveToLongTerm(c)} className={STONE_OUTLINE_BTN}>
+                          Move to long-term
+                        </button>
+                      )}
                     </div>
+                  </div>
+                  {/* Utilities available on every status */}
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => onAddNote(c)} className={STONE_OUTLINE_BTN}>
+                      Add note
+                    </button>
+                    <button type="button" onClick={() => onSetFollowUp(c)} className={STONE_OUTLINE_BTN}>
+                      Set follow-up
+                    </button>
                   </div>
                 </Section>
 

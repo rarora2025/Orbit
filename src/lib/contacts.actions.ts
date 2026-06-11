@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { supabaseAdmin } from './supabase';
 import type { Contact, Status, Interaction } from './mockData';
 import { appendPosition, positionBefore } from './position';
+import { formatMeetingSummary, formatFollowUpAt, formatReadableDate } from './meeting';
 
 interface Row {
   id: string;
@@ -163,6 +164,34 @@ export async function markMessageSent(contactId: string, input: InteractionInput
   return rowToContact(data as Row);
 }
 
+// --- Shared helpers for the lifecycle workflows below -----------------------
+
+/** Load the current contact, scoped to the signed-in user. */
+async function requireContact(contactId: string): Promise<{ userId: string; current: Contact }> {
+  const userId = await requireUserId();
+  const current = (await listContacts()).find((c) => c.id === contactId);
+  if (!current) throw new Error('Contact not found');
+  return { userId, current };
+}
+
+/** Persist a merged contact's `data` blob, scoped to user + id. */
+async function persist(userId: string, contactId: string, merged: Contact): Promise<Contact> {
+  const { data, error } = await supabaseAdmin
+    .from('contacts')
+    .update({ data: merged, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('id', contactId)
+    .select('id, position, data')
+    .single();
+  if (error) throw error;
+  return rowToContact(data as Row);
+}
+
+/** A channel-less interaction (meeting/note/status events have no channel). */
+function newInteraction(type: Interaction['type'], content: string, at: Date = new Date()): Interaction {
+  return { id: crypto.randomUUID(), date: at.toISOString(), type, content };
+}
+
 export interface ResponseInput {
   /** Free-text summary of the reply. */
   content: string;
@@ -205,4 +234,100 @@ export async function logResponse(contactId: string, input: ResponseInput): Prom
     .single();
   if (error) throw error;
   return rowToContact(data as Row);
+}
+
+export interface MeetingInput {
+  /** "YYYY-MM-DD" from a date picker. */
+  date: string;
+  /** "HH:MM" (24h) from a time picker; may be blank. */
+  time: string;
+  notes: string;
+}
+
+/**
+ * Schedule a meeting: append a "meeting_scheduled" interaction (the date, time,
+ * and notes are baked into the readable content since the schema has no meeting
+ * columns), advance status -> Meeting Scheduled, and clear any pending follow-up.
+ */
+export async function scheduleMeeting(contactId: string, input: MeetingInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const interaction = newInteraction('meeting_scheduled', formatMeetingSummary(input.date, input.time, input.notes));
+  const merged: Contact = {
+    ...current,
+    status: 'Meeting Scheduled',
+    nextFollowUpAt: undefined, // dropped on serialization
+    interactions: [...current.interactions, interaction],
+  };
+  return persist(userId, contactId, merged);
+}
+
+export interface MetInput {
+  notes: string;
+  /** Optional "YYYY-MM-DD" next follow-up date. */
+  followUpAt?: string;
+}
+
+/**
+ * Mark a scheduled meeting as completed: append "meeting_completed" with the
+ * notes and advance status -> Met. An optional follow-up date both sets
+ * nextFollowUpAt and adds a "follow_up_scheduled" interaction.
+ */
+export async function markMet(contactId: string, input: MetInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const now = new Date();
+  const interactions = [...current.interactions, newInteraction('meeting_completed', input.notes.trim(), now)];
+  let nextFollowUpAt: string | undefined;
+  if (input.followUpAt) {
+    nextFollowUpAt = formatFollowUpAt(input.followUpAt);
+    interactions.push(
+      // 1ms later so it sorts just after the completed entry
+      newInteraction('follow_up_scheduled', `Follow-up scheduled for ${formatReadableDate(input.followUpAt)}`, new Date(now.getTime() + 1)),
+    );
+  }
+  const merged: Contact = { ...current, status: 'Met', nextFollowUpAt, interactions };
+  return persist(userId, contactId, merged);
+}
+
+/** Append a "note_added" interaction. Does NOT change status. */
+export async function addNote(contactId: string, content: string): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const merged: Contact = {
+    ...current,
+    interactions: [...current.interactions, newInteraction('note_added', content.trim())],
+  };
+  return persist(userId, contactId, merged);
+}
+
+export interface FollowUpInput {
+  /** "YYYY-MM-DD" from a date picker. */
+  date: string;
+  reason?: string;
+}
+
+/** Set a manual follow-up date and log it as "follow_up_scheduled". No status change. */
+export async function setFollowUp(contactId: string, input: FollowUpInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const reason = input.reason?.trim();
+  const when = formatReadableDate(input.date);
+  const content = reason ? `Follow-up scheduled for ${when}. ${reason}` : `Follow-up scheduled for ${when}`;
+  const merged: Contact = {
+    ...current,
+    nextFollowUpAt: formatFollowUpAt(input.date),
+    interactions: [...current.interactions, newInteraction('follow_up_scheduled', content)],
+  };
+  return persist(userId, contactId, merged);
+}
+
+/**
+ * Change status and record it as a "status_changed" interaction. Used by the
+ * Move to Long-term and Mark Ghosted workflows, which carry a fixed log line.
+ */
+export async function changeStatusLogged(contactId: string, toStatus: Status, content: string): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const merged: Contact = {
+    ...current,
+    status: toStatus,
+    interactions: [...current.interactions, newInteraction('status_changed', content)],
+  };
+  return persist(userId, contactId, merged);
 }
