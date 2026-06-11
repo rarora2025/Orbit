@@ -5,6 +5,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from './supabase';
 import type { Contact } from './mockData';
 import type { MoveKind } from './nextMoves';
+import type { Tone, Channel } from './draftMessage';
 
 // Easy to bump as your account gets access to newer models.
 const MODEL = 'gpt-4o-mini';
@@ -44,6 +45,8 @@ async function fetchContact(id: string): Promise<Contact | null> {
 export async function generateDraft(
   contactId: string,
   kind: MoveKind | 'message' = 'message',
+  tone?: Tone,
+  channel?: Channel,
 ): Promise<string> {
   const openai = openaiClient();
   if (!openai) throw new Error('OPEN_AI_KEY not configured');
@@ -58,6 +61,8 @@ export async function generateDraft(
   const lastNote = contact.interactions.at(-1)?.content ?? '';
   const userPrompt = [
     `Write ${intent} to ${contact.name}${contact.role ? `, ${contact.role}` : ''}${contact.company ? ` at ${contact.company}` : ''}.`,
+    channel ? `It will be sent via ${channel}, so match that medium's length and formality.` : '',
+    tone ? `Tone: ${tone}.` : '',
     myName ? `The message is from me, ${myName} — sign it off with my name.` : '',
     contact.relationshipGoal ? `My goal with this relationship: ${contact.relationshipGoal}.` : '',
     contact.tags.length ? `Relevant context tags: ${contact.tags.join(', ')}.` : '',
