@@ -1,6 +1,6 @@
 'use client';
 
-import { Contact } from '@/lib/mockData';
+import { Contact, getNextAction } from '@/lib/mockData';
 import { formatShortDate, getDaysSince } from '@/lib/utils';
 import StatusPill from './StatusPill';
 import PriorityBadge from './PriorityBadge';
@@ -144,7 +144,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                       </div>
                     )}
                     <p className="text-[13px] text-stone-500 leading-relaxed line-clamp-2">
-                      {contact.nextAction}
+                      {getNextAction(contact)}
                     </p>
                   </td>
                 </tr>

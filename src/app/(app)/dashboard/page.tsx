@@ -11,7 +11,7 @@ import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
-  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact } = useCRMStore();
+  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact, saveDraft, markSent } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const composer = useDraftComposer();
@@ -70,7 +70,7 @@ export default function PipelinePage() {
         contact={selectedContact}
         onClose={() => selectContact(null)}
         onEdit={(id) => setEditingId(id)}
-        onDraft={(opts) => composer.open({ ...opts, kind: 'message' })}
+        onDraft={(contact) => composer.open({ contact })}
       />
 
       {/* Single unified add button */}
@@ -104,7 +104,13 @@ export default function PipelinePage() {
         <DraftModal
           title={composer.state.title}
           draft={composer.state.draft}
+          tone={composer.state.tone}
+          channel={composer.state.channel}
           loading={composer.state.loading}
+          onToneChange={composer.setTone}
+          onChannelChange={composer.setChannel}
+          onSaveDraft={(input) => saveDraft(composer.state!.contact.id, input)}
+          onMarkSent={(input) => markSent(composer.state!.contact.id, input)}
           onClose={composer.close}
         />
       )}

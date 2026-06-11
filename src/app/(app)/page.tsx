@@ -30,7 +30,7 @@ function greeting(date: Date): string {
 
 export default function InsightsPage() {
   const { user } = useUser();
-  const { contacts, loaded, updateContact } = useCRMStore();
+  const { contacts, loaded, updateContact, saveDraft, markSent } = useCRMStore();
   const composer = useDraftComposer();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -39,7 +39,6 @@ export default function InsightsPage() {
   const moves = allMoves.filter((m) => !dismissed.has(m.id));
 
   const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? 'there';
-  const nameOf = (id: string) => contacts.find((c) => c.id === id)?.name ?? 'this contact';
   const today = () => new Date().toISOString().split('T')[0];
 
   function schedule(move: NextMove) {
@@ -93,12 +92,7 @@ export default function InsightsPage() {
                     move={move}
                     linkedinUrl={c?.linkedinUrl}
                     email={c?.email}
-                    onDraft={() => composer.open({
-                      title: `Draft for ${nameOf(move.contactId)}`,
-                      contactId: move.contactId,
-                      kind: move.kind,
-                      fallback: move.draft,
-                    })}
+                    onDraft={() => { if (c) composer.open({ contact: c, kind: move.kind }); }}
                     onSchedule={() => schedule(move)}
                     onDone={() => markDone(move)}
                     onDismiss={() => dismiss(move)}
@@ -115,7 +109,13 @@ export default function InsightsPage() {
         <DraftModal
           title={composer.state.title}
           draft={composer.state.draft}
+          tone={composer.state.tone}
+          channel={composer.state.channel}
           loading={composer.state.loading}
+          onToneChange={composer.setTone}
+          onChannelChange={composer.setChannel}
+          onSaveDraft={(input) => saveDraft(composer.state!.contact.id, input)}
+          onMarkSent={(input) => markSent(composer.state!.contact.id, input)}
           onClose={composer.close}
         />
       )}
