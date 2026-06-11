@@ -6,7 +6,6 @@ export type Status =
   | 'Meeting Scheduled'
   | 'Met'
   | 'Long-term';
-export type Priority = 'Low' | 'Medium' | 'High' | 'Dream';
 export type Warmth = 'Low' | 'Medium' | 'High';
 
 export interface Interaction {
@@ -32,12 +31,10 @@ export interface Contact {
   role: string;
   linkedinUrl: string;
   email: string;
-  inquiry: string;
   notes: string;
   status: Status;
-  /** Why the user cares about this person (e.g. "internship help", "investor"). */
-  relationshipGoal?: string;
-  priority: Priority;
+  /** What the user wants from this person — also the title of a Goal, when picked. */
+  goal?: string;
   score: number;
   warmth: Warmth;
   avatarColor: string;

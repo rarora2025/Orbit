@@ -3,7 +3,6 @@
 import { Contact, getNextAction } from '@/lib/mockData';
 import { formatShortDate, getDaysSince } from '@/lib/utils';
 import StatusPill from './StatusPill';
-import PriorityBadge from './PriorityBadge';
 import TagChip from './TagChip';
 import CompanyLogo from './CompanyLogo';
 import { companyDisplayName } from '@/lib/companyLogo';
@@ -15,7 +14,7 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-const HEADERS = ['Person', 'Company / Role', 'Status', 'Priority', 'Score', 'Last contact', 'Next action'];
+const HEADERS = ['Person', 'Company / Role', 'Status', 'Score', 'Last contact', 'Next action'];
 
 export default function ContactTable({ contacts, selectedId, onSelect }: Props) {
   if (contacts.length === 0) {
@@ -112,11 +111,6 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   {/* Status */}
                   <td className="px-4 py-3">
                     <StatusPill status={contact.status} size="sm" />
-                  </td>
-
-                  {/* Priority */}
-                  <td className="px-4 py-3">
-                    <PriorityBadge priority={contact.priority} />
                   </td>
 
                   {/* Score */}

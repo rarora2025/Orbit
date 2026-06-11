@@ -34,7 +34,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     name: contact?.name ?? '',
     role: contact?.role ?? '',
     company: contact?.company ?? '',
-    relationshipGoal: contact?.relationshipGoal ?? '',
+    goal: contact?.goal ?? '',
     email: contact?.email ?? '',
     linkedinUrl: contact?.linkedinUrl ?? '',
     warmth: contact?.warmth ?? ('Medium' as Warmth),
@@ -55,7 +55,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
         name: form.name.trim(),
         role: form.role.trim(),
         company: form.company.trim(),
-        relationshipGoal: form.relationshipGoal.trim(),
+        goal: form.goal.trim(),
         email: form.email.trim(),
         linkedinUrl: form.linkedinUrl.trim(),
         warmth: form.warmth,
@@ -75,11 +75,9 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       role: form.role.trim(),
       linkedinUrl: form.linkedinUrl.trim(),
       email: form.email.trim(),
-      inquiry: '',
       notes: '',
       status: 'Send', // new people enter at the top of the pipeline; drag to move
-      relationshipGoal: form.relationshipGoal.trim(),
-      priority: 'Medium',
+      goal: form.goal.trim(),
       score: warmthScore[form.warmth],
       warmth: form.warmth,
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
@@ -170,8 +168,8 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
               className={inputClass}
               list="relationship-goals"
               placeholder="Why do you care about this person?"
-              value={form.relationshipGoal}
-              onChange={e => handleChange('relationshipGoal', e.target.value)}
+              value={form.goal}
+              onChange={e => handleChange('goal', e.target.value)}
             />
             <datalist id="relationship-goals">
               {GOAL_SUGGESTIONS.map(g => <option key={g} value={g} />)}

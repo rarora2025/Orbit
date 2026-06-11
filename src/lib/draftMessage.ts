@@ -12,7 +12,7 @@ function firstName(name: string): string {
 
 /** A specific, bracket-free reason to connect, drawn from the contact's fields. */
 function reason(contact: Contact): string {
-  const goal = contact.relationshipGoal?.trim();
+  const goal = contact.goal?.trim();
   const notes = contact.notes?.trim();
   if (goal) return goal;
   if (notes) return notes;

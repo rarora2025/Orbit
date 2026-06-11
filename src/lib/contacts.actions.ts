@@ -15,7 +15,14 @@ interface Row {
 
 function rowToContact(r: Row): Contact {
   // The full contact lives in `data`; id/position are authoritative columns.
-  return { ...r.data, id: r.id, position: r.position };
+  // Back-compat: older rows stored `relationshipGoal`/`inquiry`/`priority`.
+  const { relationshipGoal, inquiry, priority, ...rest } = r.data as Contact & {
+    relationshipGoal?: string;
+    inquiry?: string;
+    priority?: string;
+  };
+  void inquiry; void priority; // intentionally dropped
+  return { ...rest, goal: rest.goal ?? relationshipGoal, id: r.id, position: r.position };
 }
 
 async function requireUserId(): Promise<string> {

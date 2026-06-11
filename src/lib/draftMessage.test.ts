@@ -5,10 +5,10 @@ import type { Contact } from './mockData';
 function makeContact(over: Partial<Contact> = {}): Contact {
   return {
     id: 'a', position: 1000, name: 'Vinit Shah', company: 'Mojo', role: 'Founder',
-    linkedinUrl: '', email: '', inquiry: '', notes: '', status: 'Send', priority: 'Medium',
+    linkedinUrl: '', email: '', notes: '', status: 'Send',
     score: 50, warmth: 'Medium', avatarColor: '', tags: [], lastContacted: '', nextAction: '',
     aiSummary: '', outreachAngle: '', suggestedMessage: '', interactions: [],
-    relationshipGoal: 'learn about sports betting products', ...over,
+    goal: 'learn about sports betting products', ...over,
   };
 }
 
@@ -29,7 +29,7 @@ describe('generateDraftMessage', () => {
     expect(short).not.toBe(pro);
   });
   it('incorporates the relationship goal when present', () => {
-    const msg = generateDraftMessage(makeContact({ relationshipGoal: 'sports betting products' }), 'Casual', 'Email');
+    const msg = generateDraftMessage(makeContact({ goal: 'sports betting products' }), 'Casual', 'Email');
     expect(msg).toContain('sports betting products');
   });
   it('falls back to a sensible greeting for an empty name', () => {

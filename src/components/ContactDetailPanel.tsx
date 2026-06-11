@@ -116,9 +116,9 @@ export default function ContactDetailPanel({
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">
                 {/* Goals */}
                 <Section title="Goals">
-                  {c.relationshipGoal
-                    ? <p className="text-sm text-stone-700 leading-relaxed">{c.relationshipGoal}</p>
-                    : <p className="text-sm text-stone-400 italic">Not set — add why this person matters.</p>}
+                  {c.goal
+                    ? <p className="text-sm text-stone-700 leading-relaxed">{c.goal}</p>
+                    : <p className="text-sm text-stone-400 italic">Not set — add what you want from this person.</p>}
                 </Section>
 
                 {/* Contact info */}

@@ -64,7 +64,7 @@ export async function generateDraft(
     channel ? `It will be sent via ${channel}, so match that medium's length and formality.` : '',
     tone ? `Tone: ${tone}.` : '',
     myName ? `The message is from me, ${myName} — sign it off with my name.` : '',
-    contact.relationshipGoal ? `My goal with this relationship: ${contact.relationshipGoal}.` : '',
+    contact.goal ? `My goal with this relationship: ${contact.goal}.` : '',
     contact.tags.length ? `Relevant context tags: ${contact.tags.join(', ')}.` : '',
     lastNote ? `Most recent interaction: "${lastNote}".` : '',
     'Keep it under 120 words, natural and specific. Never use placeholders such as [Name], [Your name], or [Company]. Return only the message body.',

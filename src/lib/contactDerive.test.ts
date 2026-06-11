@@ -5,7 +5,7 @@ import type { Contact, Status } from './mockData';
 function makeContact(over: Partial<Contact> & { id: string; status: Status }): Contact {
   return {
     position: 1000, name: 'Vinit Shah', company: '', role: '', linkedinUrl: '',
-    email: '', inquiry: '', notes: '', priority: 'Medium', score: 50, warmth: 'Medium',
+    email: '', notes: '', score: 50, warmth: 'Medium',
     avatarColor: '', tags: [], lastContacted: '', nextAction: '', aiSummary: '',
     outreachAngle: '', suggestedMessage: '', interactions: [], ...over,
   };
