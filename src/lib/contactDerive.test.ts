@@ -45,4 +45,8 @@ describe('followUpLabel', () => {
     const label = followUpLabel(makeContact({ id: 'a', status: 'Pending', nextFollowUpAt: '2026-06-20T09:00:00Z' }), today);
     expect(label).toMatch(/^Follow up on /);
   });
+  it('shows the plain date (no urgency) for non-Pending statuses, even when past', () => {
+    const label = followUpLabel(makeContact({ id: 'a', status: 'Ghosted', nextFollowUpAt: '2026-06-01T09:00:00Z' }), today);
+    expect(label).toMatch(/^Follow up on /);
+  });
 });

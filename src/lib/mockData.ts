@@ -95,7 +95,12 @@ export const networkGaps = [
   'Discord community owners',
 ];
 
-/** Human-readable timeline labels for every interaction type. */
+/**
+ * Human-readable timeline labels for every interaction type. Intentionally a
+ * `Record<string, string>` (not keyed on `Interaction['type']`): it also covers
+ * types the spec lists but the workflow doesn't yet emit (`response_logged`,
+ * `meeting_scheduled`, `note_added`), so they render correctly if introduced.
+ */
 export const INTERACTION_LABEL: Record<string, string> = {
   message_drafted: 'Drafted outreach message',
   message_sent: 'Marked message as sent',
@@ -129,6 +134,8 @@ export function followUpLabel(contact: Contact, today: Date = new Date()): strin
   if (!contact.nextFollowUpAt) return null;
   const due = new Date(contact.nextFollowUpAt);
   if (Number.isNaN(due.getTime())) return null;
+  // "Today"/"overdue" urgency only applies while a thread is Pending; any other
+  // status (or a future date) just shows the plain date, per spec item #8.
   if (contact.status === 'Pending') {
     const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const dueDay = startOfDay(due);
