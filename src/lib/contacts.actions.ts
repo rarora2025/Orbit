@@ -162,3 +162,48 @@ export async function markMessageSent(contactId: string, input: InteractionInput
   if (error) throw error;
   return rowToContact(data as Row);
 }
+
+export interface ResponseInput {
+  /** Free-text summary of the reply. */
+  content: string;
+  /** Optional captured next step (e.g. "Schedule meeting"); appended to content. */
+  nextStep?: string;
+}
+
+/**
+ * Append a "response_logged" interaction and advance the contact: status ->
+ * Response, nextFollowUpAt cleared. The channel is preserved from the contact's
+ * most recent interaction when available. Status does not branch on next step.
+ */
+export async function logResponse(contactId: string, input: ResponseInput): Promise<Contact> {
+  const userId = await requireUserId();
+  const existing = await listContacts();
+  const current = existing.find((c) => c.id === contactId);
+  if (!current) throw new Error('Contact not found');
+
+  const summary = input.content.trim();
+  const content = input.nextStep ? `${summary}\n\nNext step: ${input.nextStep}` : summary;
+  const interaction: Interaction = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    type: 'response_logged',
+    channel: current.interactions.at(-1)?.channel,
+    content,
+  };
+
+  const merged: Contact = {
+    ...current,
+    status: 'Response',
+    nextFollowUpAt: undefined, // clear the pending follow-up; dropped on serialization
+    interactions: [...current.interactions, interaction],
+  };
+  const { data, error } = await supabaseAdmin
+    .from('contacts')
+    .update({ data: merged, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('id', contactId)
+    .select('id, position, data')
+    .single();
+  if (error) throw error;
+  return rowToContact(data as Row);
+}

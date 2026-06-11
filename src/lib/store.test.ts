@@ -8,6 +8,7 @@ vi.mock('./contacts.actions', () => ({
   listContacts: vi.fn(),
   addDraftInteraction: vi.fn(),
   markMessageSent: vi.fn(),
+  logResponse: vi.fn(),
 }));
 
 import { useCRMStore } from './store';
@@ -57,6 +58,17 @@ describe('useCRMStore interactions', () => {
     await useCRMStore.getState().saveDraft('a', { channel: 'Email', content: 'draft' });
     const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
     expect(updated?.status).toBe('Send');
+    expect(updated?.interactions).toHaveLength(1);
+  });
+
+  it('logResponse upserts the returned contact (moving it to Response)', async () => {
+    const responded = c('a', 'Response', 1000);
+    responded.interactions = [{ id: 'r1', date: '2026-06-11', type: 'response_logged', content: 'they replied' }];
+    (api.logResponse as ReturnType<typeof vi.fn>).mockResolvedValue(responded);
+    useCRMStore.setState({ contacts: [c('a', 'Pending', 1000)], loaded: true });
+    await useCRMStore.getState().logResponse('a', { content: 'they replied', nextStep: 'Schedule meeting' });
+    const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
+    expect(updated?.status).toBe('Response');
     expect(updated?.interactions).toHaveLength(1);
   });
 });

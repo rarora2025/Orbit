@@ -14,7 +14,7 @@ export interface Interaction {
   date: string;
   type:
     | 'sent' | 'received' | 'note' | 'meeting'
-    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled';
+    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled' | 'response_logged';
   channel?: string;
   content: string;
 }

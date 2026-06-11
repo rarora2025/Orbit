@@ -16,6 +16,7 @@ interface CRMStore {
   deleteContact: (id: string) => Promise<void>;
   saveDraft: (contactId: string, input: { channel: string; content: string }) => Promise<void>;
   markSent: (contactId: string, input: { channel: string; content: string }) => Promise<void>;
+  logResponse: (contactId: string, input: { content: string; nextStep?: string }) => Promise<void>;
   selectContact: (id: string | null) => void;
 }
 
@@ -45,6 +46,7 @@ export const useCRMStore = create<CRMStore>()((set) => {
     },
     saveDraft: async (contactId, input) => { upsertLocal(await api.addDraftInteraction(contactId, input)); },
     markSent: async (contactId, input) => { upsertLocal(await api.markMessageSent(contactId, input)); },
+    logResponse: async (contactId, input) => { upsertLocal(await api.logResponse(contactId, input)); },
     selectContact: (id) => set({ selectedContactId: id }),
   };
 });
