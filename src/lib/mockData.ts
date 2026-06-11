@@ -12,7 +12,10 @@ export type Warmth = 'Low' | 'Medium' | 'High';
 export interface Interaction {
   id: string;
   date: string;
-  type: 'sent' | 'received' | 'note' | 'meeting';
+  type:
+    | 'sent' | 'received' | 'note' | 'meeting'
+    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled';
+  channel?: string;
   content: string;
 }
 
@@ -35,6 +38,8 @@ export interface Contact {
   avatarColor: string;
   tags: string[];
   lastContacted: string;
+  /** ISO timestamp for the next scheduled follow-up (spec: next_follow_up_at). */
+  nextFollowUpAt?: string;
   nextAction: string;
   actionNote?: string;
   aiSummary: string;
@@ -89,3 +94,47 @@ export const networkGaps = [
   'Campus sports creators',
   'Discord community owners',
 ];
+
+/** Human-readable timeline labels for every interaction type. */
+export const INTERACTION_LABEL: Record<string, string> = {
+  message_drafted: 'Drafted outreach message',
+  message_sent: 'Marked message as sent',
+  follow_up_scheduled: 'Follow-up scheduled',
+  response_logged: 'Response logged',
+  meeting_scheduled: 'Meeting scheduled',
+  note_added: 'Note added',
+  sent: 'Sent',
+  received: 'Received',
+  note: 'Note',
+  meeting: 'Meeting',
+};
+
+/** The single next step for a contact, derived from status (never stored). */
+export function getNextAction(contact: Contact): string {
+  const name = contact.name || 'this contact';
+  switch (contact.status) {
+    case 'Send': return `Send first message to ${name}`;
+    case 'Pending': return 'Follow up if no response';
+    case 'Response': return 'Schedule meeting or reply';
+    case 'Meeting Scheduled': return 'Prepare for meeting';
+    case 'Met': return 'Add notes and decide follow-up';
+    case 'Ghosted': return 'Decide whether to revive';
+    case 'Long-term': return 'Keep warm over time';
+    default: return `Reach out to ${name}`;
+  }
+}
+
+/** Follow-up status line for the detail panel, or null when there's nothing to show. */
+export function followUpLabel(contact: Contact, today: Date = new Date()): string | null {
+  if (!contact.nextFollowUpAt) return null;
+  const due = new Date(contact.nextFollowUpAt);
+  if (Number.isNaN(due.getTime())) return null;
+  if (contact.status === 'Pending') {
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const dueDay = startOfDay(due);
+    const todayDay = startOfDay(today);
+    if (dueDay === todayDay) return 'Follow up today';
+    if (dueDay < todayDay) return 'Follow-up overdue';
+  }
+  return `Follow up on ${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
