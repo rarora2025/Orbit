@@ -101,7 +101,7 @@ export async function deleteContact(id: string): Promise<void> {
 }
 
 export interface InteractionInput {
-  channel?: string;
+  channel: string;
   content: string;
 }
 
