@@ -20,6 +20,8 @@ export interface Interaction {
   content: string;
   /** Optional captured next step (e.g. "Schedule meeting"), shown as a chip. */
   nextStep?: string;
+  /** ISO timestamp for a scheduled date (meeting time, or follow-up due date). */
+  dueAt?: string;
 }
 
 export interface Contact {
