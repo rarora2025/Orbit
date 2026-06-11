@@ -7,9 +7,9 @@ import { UserButton, useUser } from '@clerk/nextjs';
 import OrbitLogo from './OrbitLogo';
 
 const navItems = [
+  { href: '/dashboard', icon: LayoutGrid,    label: 'Dashboard' },
   { href: '/',          icon: Compass,       label: 'Insights'  },
   { href: '/chat',      icon: MessageCircle, label: 'Chat'      },
-  { href: '/dashboard', icon: LayoutGrid,    label: 'Dashboard' },
 ];
 
 export default function Sidebar() {

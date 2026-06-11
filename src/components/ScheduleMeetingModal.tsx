@@ -38,11 +38,11 @@ export default function ScheduleMeetingModal({ contactName, onSave, onClose }: P
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-backdrop-in" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-stone-200 animate-modal-in">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden border border-stone-200 animate-modal-in">
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 flex-shrink-0">
-          <h2 className="font-bold text-stone-900 text-base truncate flex items-center gap-2">
+          <h2 className="font-bold text-stone-900 text-base flex items-center gap-2">
             <Calendar size={16} className="text-orange-500 flex-shrink-0" />
             Schedule meeting with {contactName}
           </h2>
@@ -51,7 +51,7 @@ export default function ScheduleMeetingModal({ contactName, onSave, onClose }: P
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto min-h-0">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="meeting-date" className="block text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
