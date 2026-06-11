@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, columnConfig } from '@/lib/mockData';
+import { Contact, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import { X, Pencil, Star, Mail, Link2, ExternalLink, Clock } from 'lucide-react';
 
@@ -10,14 +10,11 @@ interface Props {
   contact: Contact | null;
   onClose: () => void;
   onEdit: (id: string) => void;
-  onDraft: (opts: { title: string; contactId: string; fallback: string }) => void;
+  onDraft: (contact: Contact) => void;
 }
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-const INTERACTION_LABEL: Record<string, string> = {
-  sent: 'Sent', received: 'Received', note: 'Note', meeting: 'Meeting',
-};
 
 export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
@@ -31,11 +28,10 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
   const cfg = c ? columnConfig[c.status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' } : null;
   const temp = c ? TEMP_LEVEL[c.warmth] ?? 1 : 0;
   const timeline = c ? [...c.interactions].sort((a, b) => b.date.localeCompare(a.date)) : [];
+  const followUp = c ? followUpLabel(c) : null;
 
   function draftNextAction() {
-    if (!c) return;
-    const body = c.suggestedMessage?.trim() || c.nextAction || `Reaching out to ${c.name}.`;
-    onDraft({ title: `Draft for ${c.name}`, contactId: c.id, fallback: body });
+    if (c) onDraft(c);
   }
 
   return (
@@ -123,9 +119,11 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
                 <Section title="Next action" accent>
                   <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3.5">
                     <p className="text-sm text-stone-700 leading-relaxed">
-                      {c.nextAction || `Reach out to ${c.name} to keep this relationship moving.`}
+                      {getNextAction(c)}
                     </p>
-                    {c.actionNote && <p className="text-[12px] text-stone-500 mt-1.5">{c.actionNote}</p>}
+                    {followUp && (
+                      <p className="text-[12px] font-medium text-orange-600 mt-1.5">{followUp}</p>
+                    )}
                     <button
                       type="button"
                       onClick={draftNextAction}
