@@ -10,21 +10,19 @@ import DraftModal from '@/components/DraftModal';
 import LogResponseModal from '@/components/LogResponseModal';
 import ScheduleMeetingModal from '@/components/ScheduleMeetingModal';
 import MarkMetModal from '@/components/MarkMetModal';
-import AddNoteModal from '@/components/AddNoteModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
   const {
     contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
-    saveDraft, markSent, logResponse, scheduleMeeting, markMet, addNote, moveToLongTerm, markGhosted,
+    saveDraft, markSent, logResponse, scheduleMeeting, markMet, moveToLongTerm, markGhosted,
   } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [metId, setMetId] = useState<string | null>(null);
-  const [noteId, setNoteId] = useState<string | null>(null);
   const composer = useDraftComposer();
 
   const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
@@ -32,7 +30,6 @@ export default function PipelinePage() {
   const respondingContact = contacts.find(c => c.id === respondingId) ?? null;
   const meetingContact = contacts.find(c => c.id === meetingId) ?? null;
   const metContact = contacts.find(c => c.id === metId) ?? null;
-  const noteContact = contacts.find(c => c.id === noteId) ?? null;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
@@ -89,7 +86,6 @@ export default function PipelinePage() {
         onLogResponse={(contact) => setRespondingId(contact.id)}
         onScheduleMeeting={(contact) => setMeetingId(contact.id)}
         onMarkMet={(contact) => setMetId(contact.id)}
-        onAddNote={(contact) => setNoteId(contact.id)}
         onMoveToLongTerm={(contact) => moveToLongTerm(contact.id)}
         onMarkGhosted={(contact) => markGhosted(contact.id)}
       />
@@ -167,14 +163,6 @@ export default function PipelinePage() {
         />
       )}
 
-      {/* Add note modal */}
-      {noteContact && (
-        <AddNoteModal
-          contactName={noteContact.name}
-          onSave={(content) => addNote(noteContact.id, content)}
-          onClose={() => setNoteId(null)}
-        />
-      )}
     </div>
   );
 }

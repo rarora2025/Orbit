@@ -15,7 +15,6 @@ interface Props {
   onLogResponse: (contact: Contact) => void;
   onScheduleMeeting: (contact: Contact) => void;
   onMarkMet: (contact: Contact) => void;
-  onAddNote: (contact: Contact) => void;
   onMoveToLongTerm: (contact: Contact) => void;
   onMarkGhosted: (contact: Contact) => void;
 }
@@ -60,7 +59,7 @@ function timelineDetail(it: Interaction): { text: string; className: string } | 
 
 export default function ContactDetailPanel({
   contact, onClose, onEdit, onDraft, onLogResponse,
-  onScheduleMeeting, onMarkMet, onAddNote, onMoveToLongTerm, onMarkGhosted,
+  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted,
 }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
@@ -183,7 +182,6 @@ export default function ContactDetailPanel({
                       {LONG_TERM_FROM.includes(c.status) && (
                         <button type="button" onClick={() => onMoveToLongTerm(c)} className={ACTION_BTN}>Move to long-term</button>
                       )}
-                      <button type="button" onClick={() => onAddNote(c)} className={ACTION_BTN}>Add note</button>
                     </div>
                   </div>
                 </Section>
