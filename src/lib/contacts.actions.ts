@@ -5,6 +5,7 @@ import { supabaseAdmin } from './supabase';
 import type { Contact, Status, Interaction } from './mockData';
 import { appendPosition, positionBefore } from './position';
 import { formatMeetingSummary, formatFollowUpAt, formatReadableDate } from './meeting';
+import { listUserInteractions } from './interactions.actions';
 
 interface Row {
   id: string;
@@ -31,7 +32,13 @@ export async function listContacts(): Promise<Contact[]> {
     .eq('user_id', userId)
     .order('position', { ascending: true });
   if (error) throw error;
-  return (data as Row[]).map(rowToContact);
+  const byContact = await listUserInteractions();
+  return (data as Row[]).map((r) => {
+    const contact = rowToContact(r);
+    // The interactions table is the source of truth; show newest first.
+    contact.interactions = [...(byContact.get(r.id) ?? [])].reverse();
+    return contact;
+  });
 }
 
 export async function addContact(contact: Contact): Promise<Contact> {
