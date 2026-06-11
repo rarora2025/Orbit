@@ -32,9 +32,17 @@ describe('insertInteraction', () => {
       type: 'note_added',
       content: 'hi',
       due_at: '2026-06-18T12:00:00.000Z',
+      next_step: null, // defaults to null when not provided
     });
     expect(typeof row.id).toBe('string');
     expect(typeof row.created_at).toBe('string');
+  });
+
+  it('persists a provided nextStep into the next_step column and maps it back', async () => {
+    const { insertInteraction } = await import('./interactions.actions');
+    const result = await insertInteraction('contact_1', { type: 'response_logged', content: 'they replied', nextStep: 'Schedule meeting' });
+    expect(insert.mock.calls[0][0]).toMatchObject({ next_step: 'Schedule meeting' });
+    expect(result.nextStep).toBe('Schedule meeting');
   });
 
   it('throws when not authenticated', async () => {

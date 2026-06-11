@@ -15,6 +15,8 @@ export interface NewInteraction {
   content: string;
   /** Structured date for meetings / follow-ups. */
   dueAt?: string;
+  /** Optional captured next step (response_logged), shown as a chip. */
+  nextStep?: string;
   /** Optional creation time; defaults to now. Lets callers order multi-event writes. */
   createdAt?: string;
 }
@@ -25,6 +27,7 @@ interface InteractionRow {
   type: Interaction['type'];
   content: string;
   due_at: string | null;
+  next_step: string | null;
   created_at: string;
 }
 
@@ -35,6 +38,7 @@ function rowToInteraction(r: InteractionRow): Interaction {
     type: r.type,
     content: r.content,
     dueAt: r.due_at ?? undefined,
+    nextStep: r.next_step ?? undefined,
   };
 }
 
@@ -48,6 +52,7 @@ export async function insertInteraction(contactId: string, input: NewInteraction
     type: input.type,
     content: input.content,
     due_at: input.dueAt ?? null,
+    next_step: input.nextStep ?? null,
     created_at: input.createdAt ?? new Date().toISOString(),
   };
   const { error } = await supabaseAdmin.from('interactions').insert(row);
@@ -60,7 +65,7 @@ export async function listUserInteractions(): Promise<Map<string, Interaction[]>
   const userId = await requireUserId();
   const { data, error } = await supabaseAdmin
     .from('interactions')
-    .select('id, contact_id, type, content, due_at, created_at')
+    .select('id, contact_id, type, content, due_at, next_step, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
   if (error) throw error;

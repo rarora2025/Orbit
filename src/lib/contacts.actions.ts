@@ -181,11 +181,11 @@ export async function markMessageSent(contactId: string, input: InteractionInput
 
 export async function logResponse(contactId: string, input: ResponseInput): Promise<Contact> {
   const { userId, current } = await requireContact(contactId);
+  // nextStep is persisted to the interactions table (next_step column) so the
+  // chip survives reloads, then returned on the interaction for the live update.
   const interaction = await insertInteraction(contactId, {
-    type: 'response_logged', content: input.content.trim(),
+    type: 'response_logged', content: input.content.trim(), nextStep: input.nextStep,
   });
-  // Preserve the captured next step on the in-memory object (chip in the timeline).
-  interaction.nextStep = input.nextStep;
   return persist(userId, contactId, {
     ...current,
     status: 'Response',
