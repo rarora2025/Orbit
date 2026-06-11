@@ -11,10 +11,8 @@ function makeContact(overrides: Partial<Contact>): Contact {
     role: 'Engineer',
     linkedinUrl: '',
     email: '',
-    inquiry: 'a secret inquiry',
     notes: 'private notes',
     status: 'Send',
-    priority: 'Medium',
     score: 50,
     warmth: 'Low',
     avatarColor: '',
@@ -59,7 +57,6 @@ describe('filterContacts', () => {
   });
 
   it('does not match free-text fields that are out of scope', () => {
-    expect(filterContacts(contacts, 'secret')).toEqual([]);
     expect(filterContacts(contacts, 'private')).toEqual([]);
   });
 

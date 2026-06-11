@@ -1,9 +1,8 @@
 'use client';
 
-import { Contact } from '@/lib/mockData';
+import { Contact, getNextAction } from '@/lib/mockData';
 import { formatShortDate, getDaysSince } from '@/lib/utils';
 import StatusPill from './StatusPill';
-import PriorityBadge from './PriorityBadge';
 import TagChip from './TagChip';
 import CompanyLogo from './CompanyLogo';
 import { companyDisplayName } from '@/lib/companyLogo';
@@ -15,7 +14,7 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-const HEADERS = ['Person', 'Company / Role', 'Status', 'Priority', 'Score', 'Last contact', 'Next action'];
+const HEADERS = ['Person', 'Company / Role', 'Status', 'Score', 'Last contact', 'Next action'];
 
 export default function ContactTable({ contacts, selectedId, onSelect }: Props) {
   if (contacts.length === 0) {
@@ -114,11 +113,6 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                     <StatusPill status={contact.status} size="sm" />
                   </td>
 
-                  {/* Priority */}
-                  <td className="px-4 py-3">
-                    <PriorityBadge priority={contact.priority} />
-                  </td>
-
                   {/* Score */}
                   <td className="px-4 py-3">
                     <div className="w-[30px] h-[30px] rounded-full border-[1.5px] border-orange-400 flex items-center justify-center">
@@ -144,7 +138,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                       </div>
                     )}
                     <p className="text-[13px] text-stone-500 leading-relaxed line-clamp-2">
-                      {contact.nextAction}
+                      {getNextAction(contact)}
                     </p>
                   </td>
                 </tr>

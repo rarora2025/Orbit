@@ -1,25 +1,66 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, columnConfig } from '@/lib/mockData';
+import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
-import { X, Pencil, Star, Mail, Link2, ExternalLink, Clock } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { X, Pencil, Star, Mail, Link2, ExternalLink } from 'lucide-react';
 
 interface Props {
   /** The selected contact, or null when the panel is closed. */
   contact: Contact | null;
   onClose: () => void;
   onEdit: (id: string) => void;
-  onDraft: (opts: { title: string; contactId: string; fallback: string }) => void;
+  onDraft: (contact: Contact) => void;
+  onLogResponse: (contact: Contact) => void;
+  onScheduleMeeting: (contact: Contact) => void;
+  onMarkMet: (contact: Contact) => void;
+  onMoveToLongTerm: (contact: Contact) => void;
+  onMarkGhosted: (contact: Contact) => void;
 }
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-const INTERACTION_LABEL: Record<string, string> = {
-  sent: 'Sent', received: 'Received', note: 'Note', meeting: 'Meeting',
+/** Statuses from which a contact can still be parked in Long-term. */
+const LONG_TERM_FROM: Contact['status'][] = ['Response', 'Met', 'Ghosted'];
+
+/** One unified action-button style — soft orange, used for every action. */
+const ACTION_BTN =
+  'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-600 text-[13px] font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition active:scale-95';
+
+/** Timeline node color per interaction type — one meaningful color each. */
+const NODE_COLOR: Record<string, string> = {
+  message_drafted: 'bg-orange-500',
+  message_sent: 'bg-blue-500',
+  follow_up_scheduled: 'bg-amber-500',
+  response_logged: 'bg-emerald-500',
+  meeting_scheduled: 'bg-indigo-500',
+  meeting_completed: 'bg-teal-500',
+  note_added: 'bg-purple-500',
+  status_changed: 'bg-stone-400',
 };
 
-export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }: Props) {
+/** Interaction types whose free-text content is worth showing (notes are the point). */
+const BODY_TYPES = new Set(['note_added', 'meeting_completed']);
+
+/** The colored detail line (a scheduled date), or null. */
+function timelineDetail(it: Interaction): { text: string; className: string } | null {
+  if (it.type === 'meeting_scheduled' && it.dueAt) {
+    return {
+      text: new Date(it.dueAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+      className: 'text-indigo-600',
+    };
+  }
+  if (it.type === 'follow_up_scheduled' && it.dueAt) {
+    return { text: `Due ${new Date(it.dueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`, className: 'text-amber-600' };
+  }
+  return null;
+}
+
+export default function ContactDetailPanel({
+  contact, onClose, onEdit, onDraft, onLogResponse,
+  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted,
+}: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
   // React's endorsed pattern for deriving from a changing prop.
@@ -31,12 +72,7 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
   const cfg = c ? columnConfig[c.status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' } : null;
   const temp = c ? TEMP_LEVEL[c.warmth] ?? 1 : 0;
   const timeline = c ? [...c.interactions].sort((a, b) => b.date.localeCompare(a.date)) : [];
-
-  function draftNextAction() {
-    if (!c) return;
-    const body = c.suggestedMessage?.trim() || c.nextAction || `Reaching out to ${c.name}.`;
-    onDraft({ title: `Draft for ${c.name}`, contactId: c.id, fallback: body });
-  }
+  const followUp = c ? followUpLabel(c) : null;
 
   return (
     <div
@@ -102,9 +138,9 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">
                 {/* Goals */}
                 <Section title="Goals">
-                  {c.relationshipGoal
-                    ? <p className="text-sm text-stone-700 leading-relaxed">{c.relationshipGoal}</p>
-                    : <p className="text-sm text-stone-400 italic">Not set — add why this person matters.</p>}
+                  {c.goal
+                    ? <p className="text-sm text-stone-700 leading-relaxed">{c.goal}</p>
+                    : <p className="text-sm text-stone-400 italic">Not set — add what you want from this person.</p>}
                 </Section>
 
                 {/* Contact info */}
@@ -119,46 +155,67 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
                   </div>
                 </Section>
 
-                {/* AI next action */}
+                {/* Next action */}
                 <Section title="Next action" accent>
                   <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3.5">
-                    <p className="text-sm text-stone-700 leading-relaxed">
-                      {c.nextAction || `Reach out to ${c.name} to keep this relationship moving.`}
-                    </p>
-                    {c.actionNote && <p className="text-[12px] text-stone-500 mt-1.5">{c.actionNote}</p>}
-                    <button
-                      type="button"
-                      onClick={draftNextAction}
-                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-[13px] font-semibold rounded-lg hover:bg-orange-600 transition active:scale-95 shadow-sm shadow-orange-500/30"
-                    >
-                      Draft message
-                    </button>
+                    <p className="text-sm text-stone-700 leading-relaxed">{getNextAction(c)}</p>
+                    {followUp && <p className="text-[12px] font-medium text-orange-600 mt-1.5">{followUp}</p>}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {/* Pending is a waiting state — no Draft button there. */}
+                      {c.status !== 'Pending' && (
+                        <button type="button" onClick={() => onDraft(c)} className={ACTION_BTN}>
+                          {c.status === 'Response' ? 'Draft reply' : 'Draft message'}
+                        </button>
+                      )}
+                      {c.status === 'Pending' && (
+                        <button type="button" onClick={() => onLogResponse(c)} className={ACTION_BTN}>Log response</button>
+                      )}
+                      {(c.status === 'Response' || c.status === 'Long-term') && (
+                        <button type="button" onClick={() => onScheduleMeeting(c)} className={ACTION_BTN}>Schedule meeting</button>
+                      )}
+                      {c.status === 'Meeting Scheduled' && (
+                        <button type="button" onClick={() => onMarkMet(c)} className={ACTION_BTN}>Mark as met</button>
+                      )}
+                      {c.status === 'Pending' && (
+                        <button type="button" onClick={() => onMarkGhosted(c)} className={ACTION_BTN}>Mark ghosted</button>
+                      )}
+                      {LONG_TERM_FROM.includes(c.status) && (
+                        <button type="button" onClick={() => onMoveToLongTerm(c)} className={ACTION_BTN}>Move to long-term</button>
+                      )}
+                    </div>
                   </div>
                 </Section>
 
-                {/* Timeline */}
+                {/* Timeline — a rail with a colored node per action type */}
                 <Section title="Timeline">
                   {timeline.length === 0 ? (
                     <p className="text-sm text-stone-400 italic">No interactions logged yet.</p>
                   ) : (
-                    <ol className="space-y-3">
-                      {timeline.map((it) => (
-                        <li key={it.id} className="flex gap-3">
-                          <div className="flex flex-col items-center flex-shrink-0">
-                            <span className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center">
-                              <Clock size={13} className="text-stone-400" />
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1 pb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] font-semibold text-stone-700">{INTERACTION_LABEL[it.type] ?? it.type}</span>
-                              <span className="text-[11px] text-stone-400">{it.date}</span>
-                            </div>
-                            <p className="text-[13px] text-stone-600 leading-relaxed mt-0.5">{it.content}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
+                    <div className="relative">
+                      <span className="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-stone-200" aria-hidden />
+                      <ol className="space-y-3.5">
+                        {timeline.map((it) => {
+                          const detail = timelineDetail(it);
+                          const showBody = BODY_TYPES.has(it.type) && it.content;
+                          return (
+                            <li key={it.id} className="relative pl-5">
+                              <span className={`absolute left-[1px] top-[5px] w-2.5 h-2.5 rounded-full ring-2 ring-white ${NODE_COLOR[it.type] ?? 'bg-stone-300'}`} />
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-[12.5px] font-semibold text-stone-700">{INTERACTION_LABEL[it.type] ?? it.type}</span>
+                                <span className="text-[11px] text-stone-400 ml-auto flex-shrink-0">{formatDate(it.date)}</span>
+                              </div>
+                              {detail && <div className={`text-[11.5px] font-medium mt-0.5 ${detail.className}`}>{detail.text}</div>}
+                              {showBody && <p className="text-[12.5px] text-stone-600 leading-relaxed mt-0.5 whitespace-pre-line">{it.content}</p>}
+                              {it.nextStep && (
+                                <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-[11px] font-medium text-orange-600">
+                                  Next: {it.nextStep}
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </div>
                   )}
                 </Section>
               </div>

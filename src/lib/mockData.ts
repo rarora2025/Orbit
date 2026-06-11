@@ -6,14 +6,21 @@ export type Status =
   | 'Meeting Scheduled'
   | 'Met'
   | 'Long-term';
-export type Priority = 'Low' | 'Medium' | 'High' | 'Dream';
 export type Warmth = 'Low' | 'Medium' | 'High';
 
 export interface Interaction {
   id: string;
   date: string;
-  type: 'sent' | 'received' | 'note' | 'meeting';
+  type:
+    | 'sent' | 'received' | 'note' | 'meeting'
+    | 'message_drafted' | 'message_sent' | 'follow_up_scheduled' | 'response_logged'
+    | 'meeting_scheduled' | 'meeting_completed' | 'note_added' | 'status_changed';
+  channel?: string;
   content: string;
+  /** Optional captured next step (e.g. "Schedule meeting"), shown as a chip. */
+  nextStep?: string;
+  /** ISO timestamp for a scheduled date (meeting time, or follow-up due date). */
+  dueAt?: string;
 }
 
 export interface Contact {
@@ -24,17 +31,17 @@ export interface Contact {
   role: string;
   linkedinUrl: string;
   email: string;
-  inquiry: string;
   notes: string;
   status: Status;
-  /** Why the user cares about this person (e.g. "internship help", "investor"). */
-  relationshipGoal?: string;
-  priority: Priority;
+  /** What the user wants from this person — also the title of a Goal, when picked. */
+  goal?: string;
   score: number;
   warmth: Warmth;
   avatarColor: string;
   tags: string[];
   lastContacted: string;
+  /** ISO timestamp for the next scheduled follow-up (spec: next_follow_up_at). */
+  nextFollowUpAt?: string;
   nextAction: string;
   actionNote?: string;
   aiSummary: string;
@@ -89,3 +96,56 @@ export const networkGaps = [
   'Campus sports creators',
   'Discord community owners',
 ];
+
+/**
+ * Human-readable timeline labels for every interaction type. Intentionally a
+ * `Record<string, string>` (not keyed on `Interaction['type']`): it also covers
+ * types the spec lists but the workflow doesn't yet emit (`response_logged`,
+ * `meeting_scheduled`, `note_added`), so they render correctly if introduced.
+ */
+export const INTERACTION_LABEL: Record<string, string> = {
+  message_drafted: 'Drafted outreach message',
+  message_sent: 'Marked message as sent',
+  follow_up_scheduled: 'Follow-up scheduled',
+  response_logged: 'Response logged',
+  meeting_scheduled: 'Meeting scheduled',
+  meeting_completed: 'Meeting completed',
+  note_added: 'Note added',
+  status_changed: 'Status changed',
+  sent: 'Sent',
+  received: 'Received',
+  note: 'Note',
+  meeting: 'Meeting',
+};
+
+/** The single next step for a contact, derived from status (never stored). */
+export function getNextAction(contact: Contact): string {
+  const name = contact.name || 'this contact';
+  switch (contact.status) {
+    case 'Send': return `Send first message to ${name}`;
+    case 'Pending': return 'Follow up if no response';
+    case 'Response': return 'Schedule meeting or reply';
+    case 'Meeting Scheduled': return 'Prepare for meeting';
+    case 'Met': return 'Add notes and decide follow-up';
+    case 'Ghosted': return 'Decide whether to revive';
+    case 'Long-term': return 'Keep warm over time';
+    default: return `Reach out to ${name}`;
+  }
+}
+
+/** Follow-up status line for the detail panel, or null when there's nothing to show. */
+export function followUpLabel(contact: Contact, today: Date = new Date()): string | null {
+  if (!contact.nextFollowUpAt) return null;
+  const due = new Date(contact.nextFollowUpAt);
+  if (Number.isNaN(due.getTime())) return null;
+  // "Today"/"overdue" urgency only applies while a thread is Pending; any other
+  // status (or a future date) just shows the plain date, per spec item #8.
+  if (contact.status === 'Pending') {
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const dueDay = startOfDay(due);
+    const todayDay = startOfDay(today);
+    if (dueDay === todayDay) return 'Follow up today';
+    if (dueDay < todayDay) return 'Follow-up overdue';
+  }
+  return `Follow up on ${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}

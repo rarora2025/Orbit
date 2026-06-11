@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
+import { contactDateBadge } from '@/lib/upcoming';
 import CompanyLogo from './CompanyLogo';
-import { Trash2, Star, Pencil, Mail } from 'lucide-react';
+import { Trash2, Star, Pencil, Mail, Calendar, Clock } from 'lucide-react';
 import LinkedInIcon from './LinkedInIcon';
 
 interface Props {
@@ -24,6 +25,14 @@ export default function ContactCard({ contact, onClick, isSelected, onEdit, onDe
   const temp = TEMP_LEVEL[contact.warmth] ?? 1;
   const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
   const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
+  const badge = contactDateBadge(contact);
+  const badgeTone = !badge
+    ? ''
+    : badge.kind === 'meeting'
+      ? 'bg-indigo-50 text-indigo-700'
+      : badge.overdue
+        ? 'bg-red-50 text-red-600'
+        : 'bg-amber-50 text-amber-700';
 
   return (
     <div
@@ -71,6 +80,14 @@ export default function ContactCard({ contact, onClick, isSelected, onEdit, onDe
           ))}
         </div>
       </div>
+
+      {/* Date badge: next meeting, else next follow-up (red when overdue) */}
+      {badge && (
+        <span className={`mt-2.5 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold ${badgeTone}`}>
+          {badge.kind === 'meeting' ? <Calendar size={11} /> : <Clock size={11} />}
+          {badge.label}
+        </span>
+      )}
 
       {/* Footer: quick links to reach them + edit/delete */}
       <div className="mt-2.5 pt-2.5 border-t border-stone-100 flex items-center gap-1.5">

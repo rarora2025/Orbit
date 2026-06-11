@@ -7,17 +7,29 @@ import KanbanColumn from '@/components/KanbanColumn';
 import ContactModal from '@/components/ContactModal';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
 import DraftModal from '@/components/DraftModal';
+import LogResponseModal from '@/components/LogResponseModal';
+import ScheduleMeetingModal from '@/components/ScheduleMeetingModal';
+import MarkMetModal from '@/components/MarkMetModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
-  const { contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact } = useCRMStore();
+  const {
+    contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
+    saveDraft, markSent, logResponse, scheduleMeeting, markMet, moveToLongTerm, markGhosted,
+  } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [metId, setMetId] = useState<string | null>(null);
   const composer = useDraftComposer();
 
   const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
   const editingContact = contacts.find(c => c.id === editingId) ?? null;
+  const respondingContact = contacts.find(c => c.id === respondingId) ?? null;
+  const meetingContact = contacts.find(c => c.id === meetingId) ?? null;
+  const metContact = contacts.find(c => c.id === metId) ?? null;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
@@ -70,7 +82,12 @@ export default function PipelinePage() {
         contact={selectedContact}
         onClose={() => selectContact(null)}
         onEdit={(id) => setEditingId(id)}
-        onDraft={(opts) => composer.open({ ...opts, kind: 'message' })}
+        onDraft={(contact) => composer.open({ contact })}
+        onLogResponse={(contact) => setRespondingId(contact.id)}
+        onScheduleMeeting={(contact) => setMeetingId(contact.id)}
+        onMarkMet={(contact) => setMetId(contact.id)}
+        onMoveToLongTerm={(contact) => moveToLongTerm(contact.id)}
+        onMarkGhosted={(contact) => markGhosted(contact.id)}
       />
 
       {/* Single unified add button */}
@@ -104,10 +121,48 @@ export default function PipelinePage() {
         <DraftModal
           title={composer.state.title}
           draft={composer.state.draft}
+          tone={composer.state.tone}
+          channel={composer.state.channel}
           loading={composer.state.loading}
+          onToneChange={composer.setTone}
+          onChannelChange={composer.setChannel}
+          onSaveDraft={(input) => saveDraft(composer.state!.contact.id, input)}
+          onMarkSent={(input) => markSent(composer.state!.contact.id, input)}
           onClose={composer.close}
         />
       )}
+
+      {/* Log response modal — on save, advance to Response and immediately open
+          the draft-reply composer to keep the momentum going. */}
+      {respondingContact && (
+        <LogResponseModal
+          contactName={respondingContact.name}
+          onSave={async (input) => {
+            await logResponse(respondingContact.id, input);
+            composer.open({ contact: respondingContact, kind: 'reply' });
+          }}
+          onClose={() => setRespondingId(null)}
+        />
+      )}
+
+      {/* Schedule meeting modal */}
+      {meetingContact && (
+        <ScheduleMeetingModal
+          contactName={meetingContact.name}
+          onSave={(input) => scheduleMeeting(meetingContact.id, input)}
+          onClose={() => setMeetingId(null)}
+        />
+      )}
+
+      {/* Mark as met modal */}
+      {metContact && (
+        <MarkMetModal
+          contactName={metContact.name}
+          onSave={(input) => markMet(metContact.id, input)}
+          onClose={() => setMetId(null)}
+        />
+      )}
+
     </div>
   );
 }

@@ -46,3 +46,29 @@ describe('deleteContact', () => {
     expect(eq).toHaveBeenCalledWith('id', 'contact_1');
   });
 });
+
+describe('listContacts interactions join', () => {
+  it('attaches interactions from the table, newest first, overriding the blob', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+
+    // contacts query resolves first (order on contacts), interactions query second.
+    order
+      .mockResolvedValueOnce({
+        data: [{ id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', interactions: [{ id: 'stale', date: '2000-01-01', type: 'note', content: 'blob' }] } }],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'i1', contact_id: 'c1', type: 'note_added', content: 'older', due_at: null, created_at: '2026-06-10T00:00:00.000Z' },
+          { id: 'i2', contact_id: 'c1', type: 'message_sent', content: 'newer', due_at: null, created_at: '2026-06-11T00:00:00.000Z' },
+        ],
+        error: null,
+      });
+
+    const { listContacts } = await import('./contacts.actions');
+    const contacts = await listContacts();
+    const c1 = contacts.find((c) => c.id === 'c1')!;
+    expect(c1.interactions.map((i) => i.id)).toEqual(['i2', 'i1']); // newest first
+    expect(c1.interactions.some((i) => i.id === 'stale')).toBe(false); // blob copy ignored
+  });
+});

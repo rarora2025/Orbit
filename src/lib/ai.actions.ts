@@ -1,10 +1,11 @@
 'use server';
 
 import OpenAI from 'openai';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { supabaseAdmin } from './supabase';
+import { currentUser } from '@clerk/nextjs/server';
+import { listContacts } from './contacts.actions';
 import type { Contact } from './mockData';
 import type { MoveKind } from './nextMoves';
+import type { Tone, Channel } from './draftMessage';
 
 // Easy to bump as your account gets access to newer models.
 const MODEL = 'gpt-4o-mini';
@@ -23,17 +24,10 @@ function openaiClient(): OpenAI | null {
 }
 
 async function fetchContact(id: string): Promise<Contact | null> {
-  const { userId } = await auth();
-  if (!userId) return null;
-  const { data, error } = await supabaseAdmin
-    .from('contacts')
-    .select('id, position, data')
-    .eq('user_id', userId)
-    .eq('id', id)
-    .single();
-  if (error || !data) return null;
-  const row = data as { id: string; position: number; data: Contact };
-  return { ...row.data, id: row.id, position: row.position };
+  // Reuse the canonical read so interactions are joined from the table (the
+  // blob no longer carries them) and field back-compat is applied.
+  const contacts = await listContacts();
+  return contacts.find((c) => c.id === id) ?? null;
 }
 
 /**
@@ -44,6 +38,8 @@ async function fetchContact(id: string): Promise<Contact | null> {
 export async function generateDraft(
   contactId: string,
   kind: MoveKind | 'message' = 'message',
+  tone?: Tone,
+  channel?: Channel,
 ): Promise<string> {
   const openai = openaiClient();
   if (!openai) throw new Error('OPEN_AI_KEY not configured');
@@ -58,8 +54,10 @@ export async function generateDraft(
   const lastNote = contact.interactions.at(-1)?.content ?? '';
   const userPrompt = [
     `Write ${intent} to ${contact.name}${contact.role ? `, ${contact.role}` : ''}${contact.company ? ` at ${contact.company}` : ''}.`,
+    channel ? `It will be sent via ${channel}, so match that medium's length and formality.` : '',
+    tone ? `Tone: ${tone}.` : '',
     myName ? `The message is from me, ${myName} — sign it off with my name.` : '',
-    contact.relationshipGoal ? `My goal with this relationship: ${contact.relationshipGoal}.` : '',
+    contact.goal ? `My goal with this relationship: ${contact.goal}.` : '',
     contact.tags.length ? `Relevant context tags: ${contact.tags.join(', ')}.` : '',
     lastNote ? `Most recent interaction: "${lastNote}".` : '',
     'Keep it under 120 words, natural and specific. Never use placeholders such as [Name], [Your name], or [Company]. Return only the message body.',

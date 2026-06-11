@@ -1,4 +1,4 @@
-import { Status, Priority } from './mockData';
+import { Status } from './mockData';
 
 export function getStatusColor(status: Status): string {
   switch (status) {
@@ -20,25 +20,6 @@ export function getStatusDot(status: Status): string {
   }
 }
 
-export function getPriorityColor(priority: Priority): string {
-  switch (priority) {
-    case 'Dream': return 'text-violet-600 bg-violet-50 border-violet-200';
-    case 'High': return 'text-rose-600 bg-rose-50 border-rose-200';
-    case 'Medium': return 'text-amber-600 bg-amber-50 border-amber-200';
-    case 'Low': return 'text-stone-500 bg-stone-50 border-stone-200';
-    default: return 'text-stone-500 bg-stone-50 border-stone-200';
-  }
-}
-
-export function getPriorityIcon(priority: Priority): string {
-  switch (priority) {
-    case 'Dream': return '★';
-    case 'High': return '↑↑';
-    case 'Medium': return '↑';
-    case 'Low': return '—';
-    default: return '—';
-  }
-}
 
 export function formatShortDate(dateStr: string): string {
   const d = new Date(dateStr);
