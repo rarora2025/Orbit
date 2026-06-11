@@ -11,14 +11,13 @@ import LogResponseModal from '@/components/LogResponseModal';
 import ScheduleMeetingModal from '@/components/ScheduleMeetingModal';
 import MarkMetModal from '@/components/MarkMetModal';
 import AddNoteModal from '@/components/AddNoteModal';
-import SetFollowUpModal from '@/components/SetFollowUpModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import { Plus } from 'lucide-react';
 
 export default function PipelinePage() {
   const {
     contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
-    saveDraft, markSent, logResponse, scheduleMeeting, markMet, addNote, setFollowUp, moveToLongTerm, markGhosted,
+    saveDraft, markSent, logResponse, scheduleMeeting, markMet, addNote, moveToLongTerm, markGhosted,
   } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -26,7 +25,6 @@ export default function PipelinePage() {
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [metId, setMetId] = useState<string | null>(null);
   const [noteId, setNoteId] = useState<string | null>(null);
-  const [followUpId, setFollowUpId] = useState<string | null>(null);
   const composer = useDraftComposer();
 
   const selectedContact = contacts.find(c => c.id === selectedContactId) ?? null;
@@ -35,7 +33,6 @@ export default function PipelinePage() {
   const meetingContact = contacts.find(c => c.id === meetingId) ?? null;
   const metContact = contacts.find(c => c.id === metId) ?? null;
   const noteContact = contacts.find(c => c.id === noteId) ?? null;
-  const followUpContact = contacts.find(c => c.id === followUpId) ?? null;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
@@ -93,7 +90,6 @@ export default function PipelinePage() {
         onScheduleMeeting={(contact) => setMeetingId(contact.id)}
         onMarkMet={(contact) => setMetId(contact.id)}
         onAddNote={(contact) => setNoteId(contact.id)}
-        onSetFollowUp={(contact) => setFollowUpId(contact.id)}
         onMoveToLongTerm={(contact) => moveToLongTerm(contact.id)}
         onMarkGhosted={(contact) => markGhosted(contact.id)}
       />
@@ -140,11 +136,15 @@ export default function PipelinePage() {
         />
       )}
 
-      {/* Log response modal */}
+      {/* Log response modal — on save, advance to Response and immediately open
+          the draft-reply composer to keep the momentum going. */}
       {respondingContact && (
         <LogResponseModal
           contactName={respondingContact.name}
-          onSave={(input) => logResponse(respondingContact.id, input)}
+          onSave={async (input) => {
+            await logResponse(respondingContact.id, input);
+            composer.open({ contact: respondingContact, kind: 'reply' });
+          }}
           onClose={() => setRespondingId(null)}
         />
       )}
@@ -173,15 +173,6 @@ export default function PipelinePage() {
           contactName={noteContact.name}
           onSave={(content) => addNote(noteContact.id, content)}
           onClose={() => setNoteId(null)}
-        />
-      )}
-
-      {/* Set follow-up modal */}
-      {followUpContact && (
-        <SetFollowUpModal
-          contactName={followUpContact.name}
-          onSave={(input) => setFollowUp(followUpContact.id, input)}
-          onClose={() => setFollowUpId(null)}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
 import { buildNextMoves, NextMove, MoveKind } from '@/lib/nextMoves';
+import { buildUpcoming } from '@/lib/upcoming';
 import DraftModal from '@/components/DraftModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import LinkedInIcon from '@/components/LinkedInIcon';
@@ -37,6 +38,12 @@ export default function InsightsPage() {
   const now = new Date();
   const allMoves = useMemo(() => buildNextMoves(contacts, new Date()), [contacts]);
   const moves = allMoves.filter((m) => !dismissed.has(m.id));
+  const upcoming = useMemo(() => buildUpcoming(contacts, new Date()), [contacts]);
+
+  function draftFor(contactId: string, kind: MoveKind) {
+    const c = contacts.find((x) => x.id === contactId);
+    if (c) composer.open({ contact: c, kind });
+  }
 
   const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? 'there';
   const today = () => new Date().toISOString().split('T')[0];
@@ -61,6 +68,33 @@ export default function InsightsPage() {
             {greeting(now)}, {firstName}
           </h1>
         </header>
+
+        {/* Upcoming — date-sorted meetings + follow-ups from the interactions table */}
+        {loaded && upcoming.length > 0 && (
+          <div className="flex-shrink-0 px-7 pt-5">
+            <h2 className="text-sm font-semibold text-stone-700 mb-3">Upcoming</h2>
+            <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
+              {upcoming.map((item) => (
+                <div key={`${item.contactId}-${item.kind}-${item.at}`} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-stone-200 bg-white">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.kind === 'meeting' ? 'bg-indigo-50 text-indigo-600' : item.overdue ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                    {item.kind === 'meeting' ? <Calendar size={14} /> : <Clock size={14} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-stone-800 truncate">{item.label}</p>
+                    <p className={`text-[11px] ${item.overdue ? 'text-red-600 font-medium' : 'text-stone-400'}`}>{item.when}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => draftFor(item.contactId, item.kind === 'meeting' ? 'reply' : 'follow-up')}
+                    className="flex-shrink-0 px-3 py-1.5 text-[12px] font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition active:scale-95"
+                  >
+                    {item.kind === 'meeting' ? 'Prep' : 'Draft'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Your next moves */}
         <div className="flex-1 min-h-0 flex flex-col px-7 py-5">
