@@ -33,6 +33,7 @@ export default function DraftModal({
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function copy() {
     navigator.clipboard?.writeText(text).then(() => {
@@ -43,10 +44,14 @@ export default function DraftModal({
 
   async function saveDraft() {
     setBusy(true);
+    setError(null);
     try {
       await onSaveDraft({ channel, content: text });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      console.error('Save draft failed', e);
+      setError('Could not save draft. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -55,12 +60,18 @@ export default function DraftModal({
   async function markSent() {
     setBusy(true);
     setSaved(false);
+    setError(null);
+    let ok = false;
     try {
       await onMarkSent({ channel, content: text });
+      ok = true;
+    } catch (e) {
+      console.error('Mark sent failed', e);
+      setError('Could not mark as sent. Please try again.');
     } finally {
       setBusy(false);
     }
-    onClose(); // only after a successful send; skipped if onMarkSent rejected
+    if (ok) onClose(); // close only after a successful send
   }
 
   return (
@@ -102,6 +113,7 @@ export default function DraftModal({
             Cancel
           </button>
           {saved && <span className="text-[13px] font-medium text-emerald-600 inline-flex items-center gap-1"><Check size={14} /> Saved</span>}
+          {error && <span className="text-[13px] font-medium text-red-600">{error}</span>}
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"

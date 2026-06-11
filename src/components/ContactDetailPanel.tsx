@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Contact, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
+import { formatDate } from '@/lib/utils';
 import { X, Pencil, Star, Mail, Link2, ExternalLink, Clock } from 'lucide-react';
 
 interface Props {
@@ -149,7 +150,7 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }
                           <div className="min-w-0 flex-1 pb-1">
                             <div className="flex items-center gap-2">
                               <span className="text-[12px] font-semibold text-stone-700">{INTERACTION_LABEL[it.type] ?? it.type}</span>
-                              <span className="text-[11px] text-stone-400">{it.date}</span>
+                              <span className="text-[11px] text-stone-400">{formatDate(it.date)}</span>
                             </div>
                             <p className="text-[13px] text-stone-600 leading-relaxed mt-0.5">{it.content}</p>
                           </div>

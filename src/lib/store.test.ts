@@ -48,4 +48,15 @@ describe('useCRMStore interactions', () => {
     await useCRMStore.getState().markSent('a', { channel: 'Email', content: 'hi' });
     expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Pending');
   });
+
+  it('saveDraft upserts the returned contact without changing status', async () => {
+    const withDraft = c('a', 'Send', 1000);
+    withDraft.interactions = [{ id: 'i1', date: '2026-06-11', type: 'message_drafted', content: 'draft' }];
+    (api.addDraftInteraction as ReturnType<typeof vi.fn>).mockResolvedValue(withDraft);
+    useCRMStore.setState({ contacts: [c('a', 'Send', 1000)], loaded: true });
+    await useCRMStore.getState().saveDraft('a', { channel: 'Email', content: 'draft' });
+    const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
+    expect(updated?.status).toBe('Send');
+    expect(updated?.interactions).toHaveLength(1);
+  });
 });
