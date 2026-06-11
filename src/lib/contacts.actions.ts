@@ -68,15 +68,9 @@ export async function updateContact(id: string, updates: Partial<Contact>): Prom
   const current = existing.find((c) => c.id === id);
   if (!current) throw new Error('Contact not found');
   const merged: Contact = { ...current, ...updates, id, position: current.position };
-  const { data, error } = await supabaseAdmin
-    .from('contacts')
-    .update({ data: merged, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .eq('id', id)
-    .select('id, position, data')
-    .single();
-  if (error) throw error;
-  return rowToContact(data as Row);
+  // Strip interactions from the blob (table is the source of truth) but keep
+  // them on the returned contact so the store's timeline stays populated.
+  return persist(userId, id, merged);
 }
 
 export async function moveContact(id: string, toStatus: Status, beforeId: string | null): Promise<Contact> {
@@ -88,13 +82,15 @@ export async function moveContact(id: string, toStatus: Status, beforeId: string
   const merged: Contact = { ...current, status: toStatus, position };
   const { data, error } = await supabaseAdmin
     .from('contacts')
-    .update({ position, data: merged, updated_at: new Date().toISOString() })
+    // Strip interactions from the blob; the table is the source of truth.
+    .update({ position, data: { ...merged, interactions: [] }, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('id', id)
     .select('id, position, data')
     .single();
   if (error) throw error;
-  return rowToContact(data as Row);
+  // Return `merged` (with real interactions), not the stripped blob row.
+  return { ...merged, id, position: (data as Row).position };
 }
 
 export async function deleteContact(id: string): Promise<void> {

@@ -4,7 +4,7 @@
 create table if not exists public.interactions (
   id          uuid primary key default gen_random_uuid(),
   user_id     text        not null,
-  contact_id  uuid        not null,
+  contact_id  uuid        not null references public.contacts (id) on delete cascade,
   type        text        not null,
   content     text        not null default '',
   due_at      timestamptz,
@@ -29,4 +29,5 @@ select
   coalesce((i->>'date')::timestamptz, now())
 from public.contacts c
 cross join lateral jsonb_array_elements(coalesce(c.data->'interactions', '[]'::jsonb)) as i
+where i->>'type' is not null  -- skip malformed rows that would violate NOT NULL
 on conflict (id) do nothing;
