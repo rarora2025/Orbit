@@ -181,14 +181,13 @@ export async function logResponse(contactId: string, input: ResponseInput): Prom
   const current = existing.find((c) => c.id === contactId);
   if (!current) throw new Error('Contact not found');
 
-  const summary = input.content.trim();
-  const content = input.nextStep ? `${summary}\n\nNext step: ${input.nextStep}` : summary;
   const interaction: Interaction = {
     id: crypto.randomUUID(),
     date: new Date().toISOString(),
     type: 'response_logged',
     channel: current.interactions.at(-1)?.channel,
-    content,
+    content: input.content.trim(),
+    nextStep: input.nextStep,
   };
 
   const merged: Contact = {

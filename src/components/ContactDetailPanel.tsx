@@ -164,7 +164,14 @@ export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft, 
                               <span className="text-[12px] font-semibold text-stone-700">{INTERACTION_LABEL[it.type] ?? it.type}</span>
                               <span className="text-[11px] text-stone-400">{formatDate(it.date)}</span>
                             </div>
-                            <p className="text-[13px] text-stone-600 leading-relaxed mt-0.5">{it.content}</p>
+                            {it.content && (
+                              <p className="text-[13px] text-stone-600 leading-relaxed mt-0.5 whitespace-pre-line">{it.content}</p>
+                            )}
+                            {it.nextStep && (
+                              <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-[11px] font-medium text-orange-600">
+                                Next: {it.nextStep}
+                              </span>
+                            )}
                           </div>
                         </li>
                       ))}

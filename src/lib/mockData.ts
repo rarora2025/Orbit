@@ -17,6 +17,8 @@ export interface Interaction {
     | 'message_drafted' | 'message_sent' | 'follow_up_scheduled' | 'response_logged';
   channel?: string;
   content: string;
+  /** Optional captured next step (e.g. "Schedule meeting"), shown as a chip. */
+  nextStep?: string;
 }
 
 export interface Contact {
