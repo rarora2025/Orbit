@@ -2,10 +2,10 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { supabaseAdmin } from './supabase';
-import type { Contact, Status, Interaction } from './mockData';
+import type { Contact, Status } from './mockData';
 import { appendPosition, positionBefore } from './position';
 import { formatMeetingSummary, formatFollowUpAt, formatReadableDate } from './meeting';
-import { listUserInteractions } from './interactions.actions';
+import { listUserInteractions, insertInteraction } from './interactions.actions';
 
 interface Row {
   id: string;
@@ -101,74 +101,8 @@ export async function deleteContact(id: string): Promise<void> {
 }
 
 export interface InteractionInput {
-  channel: string;
+  channel?: string;
   content: string;
-}
-
-function buildInteraction(type: Interaction['type'], input: InteractionInput, at: Date): Interaction {
-  return {
-    id: crypto.randomUUID(),
-    date: at.toISOString(),
-    type,
-    channel: input.channel,
-    content: input.content,
-  };
-}
-
-/** Append a "message_drafted" interaction. Does NOT change status. */
-export async function addDraftInteraction(contactId: string, input: InteractionInput): Promise<Contact> {
-  const userId = await requireUserId();
-  const existing = await listContacts();
-  const current = existing.find((c) => c.id === contactId);
-  if (!current) throw new Error('Contact not found');
-  const interaction = buildInteraction('message_drafted', input, new Date());
-  const merged: Contact = { ...current, interactions: [...current.interactions, interaction] };
-  const { data, error } = await supabaseAdmin
-    .from('contacts')
-    .update({ data: merged, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .eq('id', contactId)
-    .select('id, position, data')
-    .single();
-  if (error) throw error;
-  return rowToContact(data as Row);
-}
-
-/**
- * Append "message_sent" + "follow_up_scheduled" interactions and advance the
- * contact: status -> Pending, lastContacted = now, nextFollowUpAt = now + 7 days.
- */
-export async function markMessageSent(contactId: string, input: InteractionInput): Promise<Contact> {
-  const userId = await requireUserId();
-  const existing = await listContacts();
-  const current = existing.find((c) => c.id === contactId);
-  if (!current) throw new Error('Contact not found');
-
-  const now = new Date();
-  const sent = buildInteraction('message_sent', input, now);
-  const followUp = buildInteraction(
-    'follow_up_scheduled',
-    { channel: input.channel, content: 'Follow up if no response in 7 days' },
-    new Date(now.getTime() + 1), // 1ms later so it sorts just after the sent entry
-  );
-  const nextFollowUpAt = new Date(now.getTime() + 7 * 86_400_000).toISOString();
-
-  const merged: Contact = {
-    ...current,
-    status: 'Pending',
-    lastContacted: now.toISOString(),
-    nextFollowUpAt,
-    interactions: [...current.interactions, sent, followUp],
-  };
-  const { data, error } = await supabaseAdmin
-    .from('contacts')
-    .update({ data: merged, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .eq('id', contactId)
-    .select('id, position, data')
-    .single();
-  if (error) throw error;
-  return rowToContact(data as Row);
 }
 
 // --- Shared helpers for the lifecycle workflows below -----------------------
@@ -181,22 +115,19 @@ async function requireContact(contactId: string): Promise<{ userId: string; curr
   return { userId, current };
 }
 
-/** Persist a merged contact's `data` blob, scoped to user + id. */
+/** Persist a contact's `data` blob (interactions are stored in their own table). */
 async function persist(userId: string, contactId: string, merged: Contact): Promise<Contact> {
+  const dataToStore: Contact = { ...merged, interactions: [] };
   const { data, error } = await supabaseAdmin
     .from('contacts')
-    .update({ data: merged, updated_at: new Date().toISOString() })
+    .update({ data: dataToStore, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('id', contactId)
     .select('id, position, data')
     .single();
   if (error) throw error;
-  return rowToContact(data as Row);
-}
-
-/** A channel-less interaction (meeting/note/status events have no channel). */
-function newInteraction(type: Interaction['type'], content: string, at: Date = new Date()): Interaction {
-  return { id: crypto.randomUUID(), date: at.toISOString(), type, content };
+  // Return the caller's `merged` (with its real interactions), not the stripped blob.
+  return { ...merged, id: contactId, position: (data as Row).position };
 }
 
 export interface ResponseInput {
@@ -206,41 +137,54 @@ export interface ResponseInput {
   nextStep?: string;
 }
 
+/** Append a "message_drafted" interaction. Does NOT change status. */
+export async function addDraftInteraction(contactId: string, input: InteractionInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const interaction = await insertInteraction(contactId, { type: 'message_drafted', content: input.content });
+  return persist(userId, contactId, { ...current, interactions: [...current.interactions, interaction] });
+}
+
 /**
- * Append a "response_logged" interaction and advance the contact: status ->
- * Response, nextFollowUpAt cleared. The channel is preserved from the contact's
- * most recent interaction when available. Status does not branch on next step.
+ * Append "message_sent" + "follow_up_scheduled" interactions and advance the
+ * contact: status -> Pending, lastContacted = now, nextFollowUpAt = now + 7 days.
  */
+export async function markMessageSent(contactId: string, input: InteractionInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const now = new Date();
+  const nextFollowUpAt = new Date(now.getTime() + 7 * 86_400_000).toISOString();
+
+  const sent = await insertInteraction(contactId, {
+    type: 'message_sent', content: input.content, createdAt: now.toISOString(),
+  });
+  const followUp = await insertInteraction(contactId, {
+    type: 'follow_up_scheduled',
+    content: 'Follow up if no response in 7 days',
+    dueAt: nextFollowUpAt,
+    createdAt: new Date(now.getTime() + 1).toISOString(), // sorts just after "sent"
+  });
+
+  return persist(userId, contactId, {
+    ...current,
+    status: 'Pending',
+    lastContacted: now.toISOString(),
+    nextFollowUpAt,
+    interactions: [...current.interactions, sent, followUp],
+  });
+}
+
 export async function logResponse(contactId: string, input: ResponseInput): Promise<Contact> {
-  const userId = await requireUserId();
-  const existing = await listContacts();
-  const current = existing.find((c) => c.id === contactId);
-  if (!current) throw new Error('Contact not found');
-
-  const interaction: Interaction = {
-    id: crypto.randomUUID(),
-    date: new Date().toISOString(),
-    type: 'response_logged',
-    channel: current.interactions.at(-1)?.channel,
-    content: input.content.trim(),
-    nextStep: input.nextStep,
-  };
-
-  const merged: Contact = {
+  const { userId, current } = await requireContact(contactId);
+  const interaction = await insertInteraction(contactId, {
+    type: 'response_logged', content: input.content.trim(),
+  });
+  // Preserve the captured next step on the in-memory object (chip in the timeline).
+  interaction.nextStep = input.nextStep;
+  return persist(userId, contactId, {
     ...current,
     status: 'Response',
-    nextFollowUpAt: undefined, // clear the pending follow-up; dropped on serialization
+    nextFollowUpAt: undefined,
     interactions: [...current.interactions, interaction],
-  };
-  const { data, error } = await supabaseAdmin
-    .from('contacts')
-    .update({ data: merged, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .eq('id', contactId)
-    .select('id, position, data')
-    .single();
-  if (error) throw error;
-  return rowToContact(data as Row);
+  });
 }
 
 export interface MeetingInput {
@@ -251,58 +195,10 @@ export interface MeetingInput {
   notes: string;
 }
 
-/**
- * Schedule a meeting: append a "meeting_scheduled" interaction (the date, time,
- * and notes are baked into the readable content since the schema has no meeting
- * columns), advance status -> Meeting Scheduled, and clear any pending follow-up.
- */
-export async function scheduleMeeting(contactId: string, input: MeetingInput): Promise<Contact> {
-  const { userId, current } = await requireContact(contactId);
-  const interaction = newInteraction('meeting_scheduled', formatMeetingSummary(input.date, input.time, input.notes));
-  const merged: Contact = {
-    ...current,
-    status: 'Meeting Scheduled',
-    nextFollowUpAt: undefined, // dropped on serialization
-    interactions: [...current.interactions, interaction],
-  };
-  return persist(userId, contactId, merged);
-}
-
 export interface MetInput {
   notes: string;
   /** Optional "YYYY-MM-DD" next follow-up date. */
   followUpAt?: string;
-}
-
-/**
- * Mark a scheduled meeting as completed: append "meeting_completed" with the
- * notes and advance status -> Met. An optional follow-up date both sets
- * nextFollowUpAt and adds a "follow_up_scheduled" interaction.
- */
-export async function markMet(contactId: string, input: MetInput): Promise<Contact> {
-  const { userId, current } = await requireContact(contactId);
-  const now = new Date();
-  const interactions = [...current.interactions, newInteraction('meeting_completed', input.notes.trim(), now)];
-  let nextFollowUpAt: string | undefined;
-  if (input.followUpAt) {
-    nextFollowUpAt = formatFollowUpAt(input.followUpAt);
-    interactions.push(
-      // 1ms later so it sorts just after the completed entry
-      newInteraction('follow_up_scheduled', `Follow-up scheduled for ${formatReadableDate(input.followUpAt)}`, new Date(now.getTime() + 1)),
-    );
-  }
-  const merged: Contact = { ...current, status: 'Met', nextFollowUpAt, interactions };
-  return persist(userId, contactId, merged);
-}
-
-/** Append a "note_added" interaction. Does NOT change status. */
-export async function addNote(contactId: string, content: string): Promise<Contact> {
-  const { userId, current } = await requireContact(contactId);
-  const merged: Contact = {
-    ...current,
-    interactions: [...current.interactions, newInteraction('note_added', content.trim())],
-  };
-  return persist(userId, contactId, merged);
 }
 
 export interface FollowUpInput {
@@ -311,18 +207,63 @@ export interface FollowUpInput {
   reason?: string;
 }
 
-/** Set a manual follow-up date and log it as "follow_up_scheduled". No status change. */
+export async function scheduleMeeting(contactId: string, input: MeetingInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const dueAt = input.time
+    ? new Date(`${input.date}T${input.time}`).toISOString()
+    : new Date(`${input.date}T12:00:00`).toISOString();
+  const interaction = await insertInteraction(contactId, {
+    type: 'meeting_scheduled',
+    content: formatMeetingSummary(input.date, input.time, input.notes),
+    dueAt,
+  });
+  return persist(userId, contactId, {
+    ...current,
+    status: 'Meeting Scheduled',
+    nextFollowUpAt: undefined,
+    interactions: [...current.interactions, interaction],
+  });
+}
+
+export async function markMet(contactId: string, input: MetInput): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const now = new Date();
+  const completed = await insertInteraction(contactId, {
+    type: 'meeting_completed', content: input.notes.trim(), createdAt: now.toISOString(),
+  });
+  const interactions = [...current.interactions, completed];
+  let nextFollowUpAt: string | undefined;
+  if (input.followUpAt) {
+    nextFollowUpAt = formatFollowUpAt(input.followUpAt);
+    const followUp = await insertInteraction(contactId, {
+      type: 'follow_up_scheduled',
+      content: `Follow-up scheduled for ${formatReadableDate(input.followUpAt)}`,
+      dueAt: nextFollowUpAt,
+      createdAt: new Date(now.getTime() + 1).toISOString(),
+    });
+    interactions.push(followUp);
+  }
+  return persist(userId, contactId, { ...current, status: 'Met', nextFollowUpAt, interactions });
+}
+
+export async function addNote(contactId: string, content: string): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  const interaction = await insertInteraction(contactId, { type: 'note_added', content: content.trim() });
+  return persist(userId, contactId, { ...current, interactions: [...current.interactions, interaction] });
+}
+
 export async function setFollowUp(contactId: string, input: FollowUpInput): Promise<Contact> {
   const { userId, current } = await requireContact(contactId);
   const reason = input.reason?.trim();
   const when = formatReadableDate(input.date);
+  const dueAt = formatFollowUpAt(input.date);
   const content = reason ? `Follow-up scheduled for ${when}. ${reason}` : `Follow-up scheduled for ${when}`;
-  const merged: Contact = {
+  const interaction = await insertInteraction(contactId, { type: 'follow_up_scheduled', content, dueAt });
+  return persist(userId, contactId, {
     ...current,
-    nextFollowUpAt: formatFollowUpAt(input.date),
-    interactions: [...current.interactions, newInteraction('follow_up_scheduled', content)],
-  };
-  return persist(userId, contactId, merged);
+    nextFollowUpAt: dueAt,
+    interactions: [...current.interactions, interaction],
+  });
 }
 
 /**
@@ -331,10 +272,10 @@ export async function setFollowUp(contactId: string, input: FollowUpInput): Prom
  */
 export async function changeStatusLogged(contactId: string, toStatus: Status, content: string): Promise<Contact> {
   const { userId, current } = await requireContact(contactId);
-  const merged: Contact = {
+  const interaction = await insertInteraction(contactId, { type: 'status_changed', content });
+  return persist(userId, contactId, {
     ...current,
     status: toStatus,
-    interactions: [...current.interactions, newInteraction('status_changed', content)],
-  };
-  return persist(userId, contactId, merged);
+    interactions: [...current.interactions, interaction],
+  });
 }
