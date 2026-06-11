@@ -54,12 +54,13 @@ export default function DraftModal({
 
   async function markSent() {
     setBusy(true);
+    setSaved(false);
     try {
       await onMarkSent({ channel, content: text });
-      onClose();
     } finally {
       setBusy(false);
     }
+    onClose(); // only after a successful send; skipped if onMarkSent rejected
   }
 
   return (
@@ -90,6 +91,8 @@ export default function DraftModal({
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}
+            aria-label="Draft message"
+            readOnly={!!loading}
             className={`w-full resize-none bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-800 leading-relaxed focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20 transition-colors ${loading ? 'opacity-60' : ''}`}
           />
         </div>
@@ -138,12 +141,14 @@ function Segmented({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{label}</span>
-      <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-0.5">
+      <span id={`seg-${label}`} className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{label}</span>
+      <div role="radiogroup" aria-labelledby={`seg-${label}`} className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-0.5">
         {options.map((opt) => (
           <button
             key={opt}
             type="button"
+            role="radio"
+            aria-checked={value === opt}
             onClick={() => onChange(opt)}
             className={`px-2.5 py-1 text-[12px] font-medium rounded-md transition-colors ${
               value === opt ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
