@@ -15,7 +15,6 @@ interface Props {
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-
 export default function ContactDetailPanel({ contact, onClose, onEdit, onDraft }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
