@@ -6,10 +6,13 @@ vi.mock('./contacts.actions', () => ({
   moveContact: vi.fn(),
   deleteContact: vi.fn(),
   listContacts: vi.fn(),
+  addDraftInteraction: vi.fn(),
+  markMessageSent: vi.fn(),
 }));
 
 import { useCRMStore } from './store';
 import type { Contact } from './mockData';
+import * as api from './contacts.actions';
 
 function c(id: string, status: Contact['status'], position: number): Contact {
   return {
@@ -34,5 +37,15 @@ describe('useCRMStore hydration', () => {
   it('selectContact toggles the selection', () => {
     useCRMStore.getState().selectContact('a');
     expect(useCRMStore.getState().selectedContactId).toBe('a');
+  });
+});
+
+describe('useCRMStore interactions', () => {
+  it('markSent upserts the returned contact (moving it to Pending)', async () => {
+    const moved = c('a', 'Pending', 1000);
+    (api.markMessageSent as ReturnType<typeof vi.fn>).mockResolvedValue(moved);
+    useCRMStore.setState({ contacts: [c('a', 'Send', 1000)], loaded: true });
+    await useCRMStore.getState().markSent('a', { channel: 'Email', content: 'hi' });
+    expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Pending');
   });
 });
