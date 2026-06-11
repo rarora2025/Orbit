@@ -54,9 +54,10 @@ describe('listUserInteractions', () => {
       error: null,
     });
     const { listUserInteractions } = await import('./interactions.actions');
-    const byContact = await listUserInteractions('user_123');
+    const byContact = await listUserInteractions();
     expect(from).toHaveBeenCalledWith('interactions');
-    expect(eq).toHaveBeenCalledWith('user_id', 'user_123');
+    expect(eq).toHaveBeenCalledWith('user_id', 'user_123'); // scoped to the signed-in user
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: true }); // oldest→newest
     const c1 = byContact.get('c1')!;
     expect(c1).toHaveLength(2);
     expect(c1[0]).toMatchObject({ id: 'i1', type: 'note_added', content: 'a', date: '2026-06-10T00:00:00.000Z' });

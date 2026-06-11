@@ -22,7 +22,7 @@ export interface NewInteraction {
 interface InteractionRow {
   id: string;
   contact_id: string;
-  type: string;
+  type: Interaction['type'];
   content: string;
   due_at: string | null;
   created_at: string;
@@ -32,7 +32,7 @@ function rowToInteraction(r: InteractionRow): Interaction {
   return {
     id: r.id,
     date: r.created_at,
-    type: r.type as Interaction['type'],
+    type: r.type,
     content: r.content,
     dueAt: r.due_at ?? undefined,
   };
@@ -55,8 +55,9 @@ export async function insertInteraction(contactId: string, input: NewInteraction
   return rowToInteraction(row);
 }
 
-/** Load all of a user's interactions, grouped by contact id, sorted oldest→newest. */
-export async function listUserInteractions(userId: string): Promise<Map<string, Interaction[]>> {
+/** Load all of the signed-in user's interactions, grouped by contact id, sorted oldest→newest. */
+export async function listUserInteractions(): Promise<Map<string, Interaction[]>> {
+  const userId = await requireUserId();
   const { data, error } = await supabaseAdmin
     .from('interactions')
     .select('id, contact_id, type, content, due_at, created_at')
