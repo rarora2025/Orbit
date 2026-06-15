@@ -36,6 +36,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     company: contact?.company ?? '',
     goal: contact?.goal ?? '',
     email: contact?.email ?? '',
+    phone: contact?.phone ?? '',
     linkedinUrl: contact?.linkedinUrl ?? '',
     warmth: contact?.warmth ?? ('Medium' as Warmth),
   });
@@ -57,6 +58,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
         company: form.company.trim(),
         goal: form.goal.trim(),
         email: form.email.trim(),
+        phone: form.phone.trim(),
         linkedinUrl: form.linkedinUrl.trim(),
         warmth: form.warmth,
         score: warmthScore[form.warmth],
@@ -75,6 +77,7 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       role: form.role.trim(),
       linkedinUrl: form.linkedinUrl.trim(),
       email: form.email.trim(),
+      phone: form.phone.trim(),
       notes: '',
       status: 'Send', // new people enter at the top of the pipeline; drag to move
       goal: form.goal.trim(),
@@ -83,6 +86,9 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
       tags: [],
       lastContacted: new Date().toISOString().split('T')[0],
+      // New people enter at "Send" with a send-by date of today, so they show up
+      // in Next moves right away (reschedule via "Schedule send").
+      nextFollowUpAt: new Date().toISOString(),
       nextAction: `Send first message to ${form.name.trim()}`,
       aiSummary: '',
       outreachAngle: '',
@@ -186,6 +192,15 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
                 placeholder="Email address"
                 value={form.email}
                 onChange={e => handleChange('email', e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                type="tel"
+                className={inputClass}
+                placeholder="Phone (optional)"
+                value={form.phone}
+                onChange={e => handleChange('phone', e.target.value)}
               />
             </div>
             <div>

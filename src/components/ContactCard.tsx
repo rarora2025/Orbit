@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { Contact } from '@/lib/mockData';
-import { contactDateBadge } from '@/lib/upcoming';
+import { formatRelativeDate } from '@/lib/utils';
 import CompanyLogo from './CompanyLogo';
-import { Trash2, Star, Pencil, Mail, Calendar, Clock } from 'lucide-react';
-import LinkedInIcon from './LinkedInIcon';
+import TemperatureStars from './TemperatureStars';
+import ContactDateBadge from './ContactDateBadge';
+import ContactLinks from './ContactLinks';
+import { Trash2, Pencil } from 'lucide-react';
 
 interface Props {
   contact: Contact;
@@ -18,21 +20,10 @@ interface Props {
   onDragEnd?: (e: React.DragEvent) => void;
 }
 
-const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
-
 export default function ContactCard({ contact, onClick, isSelected, onEdit, onDelete, draggable, onDragStart, onDragEnd }: Props) {
   const [dragging, setDragging] = useState(false);
-  const temp = TEMP_LEVEL[contact.warmth] ?? 1;
   const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
   const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
-  const badge = contactDateBadge(contact);
-  const badgeTone = !badge
-    ? ''
-    : badge.kind === 'meeting'
-      ? 'bg-indigo-50 text-indigo-700'
-      : badge.overdue
-        ? 'bg-red-50 text-red-600'
-        : 'bg-amber-50 text-amber-700';
 
   return (
     <div
@@ -66,54 +57,23 @@ export default function ContactCard({ contact, onClick, isSelected, onEdit, onDe
             <p className="text-[13px] text-stone-500 leading-tight truncate mt-0.5">{subtitle}</p>
           )}
         </div>
-        <div
-          className="flex-shrink-0 flex items-center gap-0.5"
-          title={`Temperature: ${contact.warmth}`}
-          aria-label={`Temperature ${contact.warmth}`}
-        >
-          {[1, 2, 3].map((i) => (
-            <Star
-              key={i}
-              size={13}
-              className={i <= temp ? 'fill-orange-400 text-orange-400' : 'fill-stone-100 text-stone-200'}
-            />
-          ))}
-        </div>
+        <span className="flex-shrink-0">
+          <TemperatureStars warmth={contact.warmth} />
+        </span>
       </div>
 
-      {/* Date badge: next meeting, else next follow-up (red when overdue) */}
-      {badge && (
-        <span className={`mt-2.5 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold ${badgeTone}`}>
-          {badge.kind === 'meeting' ? <Calendar size={11} /> : <Clock size={11} />}
-          {badge.label}
-        </span>
-      )}
+      {/* Dates: when they were last contacted, then the next follow-up/meeting */}
+      <div className="mt-2.5 flex items-center gap-x-2 gap-y-1 flex-wrap empty:mt-0">
+        {contact.lastContacted && (
+          <span className="text-[11px] text-stone-400">{formatRelativeDate(contact.lastContacted)}</span>
+        )}
+        <ContactDateBadge contact={contact} />
+      </div>
 
       {/* Footer: quick links to reach them + edit/delete */}
       <div className="mt-2.5 pt-2.5 border-t border-stone-100 flex items-center gap-1.5">
-        <div className="flex items-center gap-0.5 flex-1 min-w-0">
-          {contact.linkedinUrl && (
-            <a
-              href={contact.linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`${contact.name} on LinkedIn`}
-              className="p-1 rounded-md text-stone-400 hover:bg-[#0A66C2]/10 hover:text-[#0A66C2] transition-colors"
-            >
-              <LinkedInIcon size={14} />
-            </a>
-          )}
-          {contact.email && (
-            <a
-              href={`mailto:${contact.email}`}
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`Email ${contact.name}`}
-              className="p-1 rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
-            >
-              <Mail size={14} />
-            </a>
-          )}
+        <div className="flex-1 min-w-0">
+          <ContactLinks contact={contact} />
         </div>
         {onEdit && (
           <button

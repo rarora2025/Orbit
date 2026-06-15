@@ -9,7 +9,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Pursuit CRM",
+  title: "Orbit CRM",
   description: "AI-powered relationship manager for ambitious founders",
 };
 

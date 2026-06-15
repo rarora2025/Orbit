@@ -1,4 +1,5 @@
 import type { Contact } from './mockData';
+import { nextContactAt } from './upcoming';
 
 export type MoveKind = 'follow-up' | 'outreach' | 'reply';
 
@@ -9,105 +10,115 @@ export interface NextMove {
   kind: MoveKind;
   /** Imperative headline, e.g. "Follow up with Nicholas Hull". */
   title: string;
-  /** Short context, e.g. "ghosted 9 days". */
+  /** Short context — the due urgency, e.g. "Due today", "Overdue by 3 days". */
   detail: string;
   /** Prefilled text for the Draft action. */
   draft: string;
 }
 
-// How long a Pending thread can sit before it's worth a nudge.
-const PENDING_NUDGE_DAYS = 5;
+/** How far ahead a scheduled date counts as a "next move" rather than "upcoming". */
+export const DUE_SOON_DAYS = 3;
+const MS_PER_DAY = 86_400_000;
 
-function daysSince(dateStr: string, today: Date): number {
-  if (!dateStr) return 0;
-  const then = new Date(dateStr);
-  if (Number.isNaN(then.getTime())) return 0;
-  return Math.max(0, Math.floor((today.getTime() - then.getTime()) / 86_400_000));
+/** Cutoff (epoch ms) for "due soon": anything at/earlier than this — including
+ *  everything overdue — is a next move; later than this is just upcoming. */
+export function dueSoonCutoff(today: Date = new Date()): number {
+  return today.getTime() + DUE_SOON_DAYS * MS_PER_DAY;
 }
 
-function plural(n: number, unit: string): string {
-  return `${n} ${unit}${n === 1 ? '' : 's'}`;
+function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-interface Candidate {
-  move: Omit<NextMove, 'id' | 'draft'> & { defaultDraft: string };
-  weight: number;
+/** Human urgency for a due date relative to today. */
+function dueDescription(dueISO: string, today: Date): string {
+  const days = Math.round((startOfDay(new Date(dueISO).getTime()) - startOfDay(today.getTime())) / MS_PER_DAY);
+  if (days < 0) return Math.abs(days) === 1 ? 'Overdue by 1 day' : `Overdue by ${Math.abs(days)} days`;
+  if (days === 0) return 'Due today';
+  if (days === 1) return 'Due tomorrow';
+  return `Due in ${days} days`;
 }
 
-// One move per contact: the single most useful next step given their status.
-function candidateFor(contact: Contact, today: Date): Candidate | null {
-  const { name, status } = contact;
-  const days = daysSince(contact.lastContacted, today);
+interface MoveContent {
+  kind: MoveKind;
+  title: string;
+  defaultDraft: string;
+}
 
+/** The action + prefilled draft for a contact, by status. */
+function moveContentFor(contact: Contact): MoveContent {
+  const { name, status, company } = contact;
+  const first = name.split(' ')[0];
   switch (status) {
-    case 'Ghosted':
+    case 'Send':
       return {
-        weight: 100 + days,
-        move: {
-          contactId: contact.id,
-          kind: 'follow-up',
-          title: `Follow up with ${name}`,
-          detail: `ghosted ${plural(days, 'day')}`,
-          defaultDraft: `Hi ${name.split(' ')[0]}, just floating this back to the top of your inbox — would still love to connect when you have a moment.`,
-        },
+        kind: 'outreach',
+        title: `Send outreach to ${name}`,
+        defaultDraft: `Hi ${first}, I came across your work${company ? ` at ${company}` : ''} and would love to connect.`,
       };
     case 'Response':
       return {
-        weight: 85,
-        move: {
-          contactId: contact.id,
-          kind: 'reply',
-          title: `Reply to ${name}`,
-          detail: days > 0 ? `replied ${plural(days, 'day')} ago` : 'replied today',
-          defaultDraft: `Hi ${name.split(' ')[0]}, thanks for getting back to me! Would you be open to a quick call this week?`,
-        },
+        kind: 'reply',
+        title: `Reply to ${name}`,
+        defaultDraft: `Hi ${first}, thanks for getting back to me! Would you be open to a quick call this week?`,
       };
-    case 'Send':
+    case 'Ghosted':
       return {
-        weight: 70,
-        move: {
-          contactId: contact.id,
-          kind: 'outreach',
-          title: `Send first outreach to ${name}`,
-          detail: 'no message sent yet',
-          defaultDraft: `Hi ${name.split(' ')[0]}, I came across your work${contact.company ? ` at ${contact.company}` : ''} and would love to connect.`,
-        },
+        kind: 'follow-up',
+        title: `Follow up with ${name}`,
+        defaultDraft: `Hi ${first}, just floating this back to the top of your inbox — would still love to connect when you have a moment.`,
+      };
+    case 'Met':
+      return {
+        kind: 'follow-up',
+        title: `Check in with ${name}`,
+        defaultDraft: `Hi ${first}, great catching up recently — wanted to keep the conversation going.`,
+      };
+    case 'Long-term':
+      return {
+        kind: 'follow-up',
+        title: `Check in with ${name}`,
+        defaultDraft: `Hi ${first}, it's been a while — hope you're doing well. Wanted to reconnect.`,
       };
     case 'Pending':
-      if (days <= PENDING_NUDGE_DAYS) return null;
-      return {
-        weight: 60 + days,
-        move: {
-          contactId: contact.id,
-          kind: 'follow-up',
-          title: `Follow up with ${name}`,
-          detail: `waiting ${plural(days, 'day')}`,
-          defaultDraft: `Hi ${name.split(' ')[0]}, following up on my last note — no rush, just keeping it on your radar.`,
-        },
-      };
     default:
-      // Scheduled meetings, 'Met', and 'Long-term' relationships need no prompting.
-      return null;
+      return {
+        kind: 'follow-up',
+        title: `Follow up with ${name}`,
+        defaultDraft: `Hi ${first}, following up on my last note — no rush, just keeping it on your radar.`,
+      };
   }
 }
 
 /**
- * Derive the user's prioritized "next moves" from their contacts. Pure and
- * deterministic given `today`, so it's trivial to test and safe to recompute on
- * every render. Highest-urgency move first; capped so the list stays scannable.
+ * The user's "next moves": every contact whose next-action date (send-by or
+ * follow-up) is overdue or due within `DUE_SOON_DAYS`. Soonest first. Meetings
+ * are deliberately excluded — a scheduled meeting is "prepare", not "draft", and
+ * lives in Upcoming. Pure and deterministic given `today`.
  */
 export function buildNextMoves(contacts: Contact[], today: Date = new Date(), limit = 8): NextMove[] {
+  const cutoff = dueSoonCutoff(today);
   return contacts
-    .map((c) => candidateFor(c, today))
-    .filter((c): c is Candidate => c !== null)
-    .sort((a, b) => b.weight - a.weight)
+    .filter((c) => c.status !== 'Meeting Scheduled')
+    .map((c) => {
+      const due = nextContactAt(c);
+      if (!due) return null;
+      const dueMs = new Date(due).getTime();
+      if (Number.isNaN(dueMs) || dueMs > cutoff) return null;
+      return { contact: c, due, dueMs };
+    })
+    .filter((x): x is { contact: Contact; due: string; dueMs: number } => x !== null)
+    .sort((a, b) => a.dueMs - b.dueMs)
     .slice(0, limit)
-    .map(({ move }) => {
-      const contact = contacts.find((c) => c.id === move.contactId)!;
-      const { defaultDraft, ...rest } = move;
+    .map(({ contact, due }) => {
+      const { kind, title, defaultDraft } = moveContentFor(contact);
       return {
-        ...rest,
-        id: `${move.contactId}:${move.kind}`,
+        id: `${contact.id}:${kind}`,
+        contactId: contact.id,
+        kind,
+        title,
+        detail: dueDescription(due, today),
         draft: contact.suggestedMessage?.trim() || defaultDraft,
       };
     });

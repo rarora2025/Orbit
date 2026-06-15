@@ -11,7 +11,6 @@ vi.mock('./contacts.actions', () => ({
   logResponse: vi.fn(),
   scheduleMeeting: vi.fn(),
   markMet: vi.fn(),
-  addNote: vi.fn(),
   setFollowUp: vi.fn(),
   changeStatusLogged: vi.fn(),
 }));
@@ -92,17 +91,6 @@ describe('useCRMStore interactions', () => {
     useCRMStore.setState({ contacts: [c('a', 'Meeting Scheduled', 1000)], loaded: true });
     await useCRMStore.getState().markMet('a', { notes: 'went well' });
     expect(useCRMStore.getState().contacts.find((x) => x.id === 'a')?.status).toBe('Met');
-  });
-
-  it('addNote upserts the returned contact without changing status', async () => {
-    const noted = c('a', 'Met', 1000);
-    noted.interactions = [{ id: 'n1', date: '2026-06-11', type: 'note_added', content: 'a note' }];
-    (api.addNote as ReturnType<typeof vi.fn>).mockResolvedValue(noted);
-    useCRMStore.setState({ contacts: [c('a', 'Met', 1000)], loaded: true });
-    await useCRMStore.getState().addNote('a', 'a note');
-    const updated = useCRMStore.getState().contacts.find((x) => x.id === 'a');
-    expect(updated?.status).toBe('Met');
-    expect(updated?.interactions).toHaveLength(1);
   });
 
   it('moveToLongTerm calls changeStatusLogged with Long-term and upserts', async () => {
