@@ -1,0 +1,135 @@
+/* Orbit landing page — fully scoped under `.orbit-landing` so none of these
+   rules can leak into the authenticated app. Ported from the standalone design;
+   font literals are swapped for the next/font CSS variables set on the wrapper. */
+
+.orbit-landing {
+  /* theme tokens (warm paper background, orange accent) */
+  --paper:     oklch(0.965 0.008 78);
+  --paper-2:   oklch(0.945 0.009 78);
+  --panel:     oklch(0.992 0.004 80);
+  --card:      oklch(1 0 0);
+  --text:      oklch(0.24 0.02 62);
+  --dim:       oklch(0.455 0.016 62);
+  --faint:     oklch(0.6 0.012 62);
+  --border:    oklch(0.9 0.01 72);
+  --border-hi: oklch(0.84 0.012 72);
+  --accent:    oklch(0.66 0.19 45);
+  --accent-d:  oklch(0.6 0.2 42);
+  --accent-soft: oklch(0.93 0.07 55);
+  --accent-text: oklch(0.5 0.18 42);
+  --ring-track:  oklch(0.91 0.01 72);
+  --blue:  oklch(0.62 0.16 250);
+  --amber: oklch(0.72 0.13 75);
+  --green: oklch(0.62 0.16 155);
+  --red:   oklch(0.62 0.18 18);
+  --shadow-sm: 0 1px 3px rgba(40,30,20,.06);
+  --shadow:    0 1px 2px rgba(40,30,20,.05), 0 10px 28px rgba(40,30,20,.07);
+  --shadow-lg: 0 4px 14px rgba(40,30,20,.06), 0 30px 70px rgba(40,30,20,.11);
+  --maxw: 1180px;
+
+  min-height: 100dvh;
+  /* Same base as the app body (#faf9f5) so the floating glass nav blends in
+     exactly like the app's — the warm tone comes from the hero glow above. */
+  background: #faf9f5;
+  color: var(--text);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  /* clear the fixed nav pill (matches the app's 4.75rem content offset) */
+  padding-top: 4.75rem;
+}
+.orbit-landing * { box-sizing: border-box; }
+.orbit-landing ::selection { background: var(--accent-soft); }
+.orbit-landing .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 32px; }
+
+/* ---------- hero ---------- */
+.orbit-landing .hero { padding: clamp(52px, 8vh, 92px) 0 clamp(40px, 6vh, 72px); position: relative; text-align: center; }
+.orbit-landing .hero::before {
+  content: ""; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+  width: min(1100px, 96vw); height: 600px; pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, oklch(0.94 0.06 45 / .5), transparent 72%);
+}
+.orbit-landing .hero > .wrap { position: relative; z-index: 1; }
+.orbit-landing h1 {
+  font-size: clamp(38px, 5.2vw, 70px); line-height: 1.04; letter-spacing: -0.035em;
+  font-weight: 780; margin: 0 auto; max-width: 15ch; color: var(--text); text-wrap: balance;
+}
+.orbit-landing h1 .accent { color: var(--accent); }
+.orbit-landing .hero-sub {
+  margin: 26px auto 0; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.55;
+  color: var(--dim); max-width: 60ch; font-weight: 450;
+}
+
+/* ---------- orbital network (hero) ---------- */
+.orbit-landing .orbit-hero { margin-top: clamp(30px, 5vh, 56px); display: flex; justify-content: center; }
+.orbit-landing .orbit-stage { position: relative; width: min(600px, 90vw); aspect-ratio: 1; }
+.orbit-landing .orbit-stage .glow { position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle at 50% 46%, oklch(0.95 0.05 45 / .85), transparent 60%); filter: blur(6px); z-index: 0; }
+/* dashed concentric guide rings (proper circles via border-radius:50%) */
+.orbit-landing .track { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); border-radius: 50%; border: 1px dashed var(--border-hi); z-index: 1; }
+.orbit-landing .t1 { width: 38%; height: 38%; } .orbit-landing .t2 { width: 66%; height: 66%; } .orbit-landing .t3 { width: 90%; height: 90%; }
+/* NB: class is `oring`, not `ring` — `ring*` collides with Tailwind's
+   box-shadow ring utilities (which painted a square outline on these divs). */
+.orbit-landing .oring { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-landing .oring1 { animation: orbit-cw 56s linear infinite; }
+  .orbit-landing .oring2 { animation: orbit-ccw 80s linear infinite; }
+  .orbit-landing .oring3 { animation: orbit-cw 108s linear infinite; }
+}
+.orbit-landing .orbit-node { position: absolute; transform: translate(-50%,-50%); }
+.orbit-landing .chip {
+  position: relative; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  box-shadow: 0 8px 18px rgba(40,30,20,.16), inset 0 1px 0 rgba(255,255,255,.5); will-change: transform;
+  cursor: pointer; overflow: hidden; pointer-events: auto;
+  transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease;
+}
+.orbit-landing .chip::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 54%); z-index: 2; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .orbit-landing .chip { animation: breathe 5s ease-in-out infinite; } }
+.orbit-landing .orb-logo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; z-index: 1; transition: opacity .34s ease; background: #fff; }
+.orbit-landing .orb-tip { position: absolute; bottom: 100%; left: 50%; margin-bottom: 4px; transform: translate(-50%, 4px) scale(.92); transform-origin: bottom center; white-space: nowrap;
+  background: var(--card); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 9px; padding: 5px 11px; font-size: 12px; font-weight: 650;
+  opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 30; }
+.orbit-landing .chip:hover .orb-tip { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.orbit-landing .oring:has(.chip:hover) { z-index: 40; animation-play-state: paused; }
+.orbit-landing .chip:hover { transform: scale(1.24) !important; box-shadow: 0 16px 34px rgba(40,30,20,.26), inset 0 1px 0 rgba(255,255,255,.55) !important; z-index: 20; }
+
+.orbit-landing .hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: clamp(80px, 14%, 110px); aspect-ratio: 1;
+  border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff, oklch(0.97 0.02 60) 42%, oklch(0.93 0.06 45) 100%);
+  border: 1px solid var(--border); box-shadow: var(--shadow-lg); display: grid; place-items: center; z-index: 4; }
+.orbit-landing .hub svg { width: 54%; height: 54%; }
+.orbit-landing .you-pill { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 46px); z-index: 4;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--accent-text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; box-shadow: var(--shadow-sm); }
+
+.orbit-landing .insight-chip { position: absolute; z-index: 6; display: flex; align-items: center; gap: 9px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 13px; padding: 9px 14px 9px 11px; box-shadow: var(--shadow);
+  font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.orbit-landing .insight-chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--cdot) 22%, transparent); background: var(--cdot); }
+.orbit-landing .insight-chip .txt { transition: opacity .35s ease; }
+.orbit-landing .insight-a { top: 6%; left: -3%; --cdot: var(--amber); }
+.orbit-landing .insight-b { bottom: 8%; right: -4%; --cdot: var(--green); }
+@media (prefers-reduced-motion: no-preference) { .orbit-landing .insight-a { animation: bob 6.5s ease-in-out infinite; } .orbit-landing .insight-b { animation: bob 7.5s ease-in-out infinite .8s; } }
+
+@keyframes orbit-cw { to { transform: rotate(360deg); } }
+@keyframes orbit-ccw { to { transform: rotate(-360deg); } }
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* ---------- reveal-on-scroll ---------- */
+.orbit-landing.reveal-ready .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+.orbit-landing.reveal-ready .reveal.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-landing.reveal-ready .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 620px) {
+  .orbit-landing .wrap { padding: 0 20px; }
+}
+@media (max-width: 560px) {
+  .orbit-landing .insight-chip { font-size: 11.5px; padding: 8px 12px 8px 10px; }
+  .orbit-landing .insight-a { left: -5%; }
+  .orbit-landing .insight-b { right: -5%; }
+}
