@@ -19,8 +19,8 @@ interface CRMStore {
   logResponse: (contactId: string, input: { content: string; nextStep?: string }) => Promise<void>;
   scheduleMeeting: (contactId: string, input: { date: string; time: string; notes: string }) => Promise<void>;
   markMet: (contactId: string, input: { notes: string; followUpAt?: string }) => Promise<void>;
-  addNote: (contactId: string, content: string) => Promise<void>;
   setFollowUp: (contactId: string, input: { date: string; reason?: string }) => Promise<void>;
+  clearFollowUp: (contactId: string) => Promise<void>;
   moveToLongTerm: (contactId: string) => Promise<void>;
   markGhosted: (contactId: string) => Promise<void>;
   selectContact: (id: string | null) => void;
@@ -55,8 +55,8 @@ export const useCRMStore = create<CRMStore>()((set) => {
     logResponse: async (contactId, input) => { upsertLocal(await api.logResponse(contactId, input)); },
     scheduleMeeting: async (contactId, input) => { upsertLocal(await api.scheduleMeeting(contactId, input)); },
     markMet: async (contactId, input) => { upsertLocal(await api.markMet(contactId, input)); },
-    addNote: async (contactId, content) => { upsertLocal(await api.addNote(contactId, content)); },
     setFollowUp: async (contactId, input) => { upsertLocal(await api.setFollowUp(contactId, input)); },
+    clearFollowUp: async (contactId) => { upsertLocal(await api.clearFollowUp(contactId)); },
     moveToLongTerm: async (contactId) => { upsertLocal(await api.changeStatusLogged(contactId, 'Long-term', 'Moved to long-term')); },
     markGhosted: async (contactId) => { upsertLocal(await api.changeStatusLogged(contactId, 'Ghosted', 'Marked as ghosted')); },
     selectContact: (id) => set({ selectedContactId: id }),

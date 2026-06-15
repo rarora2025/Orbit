@@ -31,6 +31,8 @@ export interface Contact {
   role: string;
   linkedinUrl: string;
   email: string;
+  /** Optional phone number — powers a tel: link wherever contact links appear. */
+  phone?: string;
   notes: string;
   status: Status;
   /** What the user wants from this person — also the title of a Goal, when picked. */

@@ -37,6 +37,22 @@ export function getDaysSince(dateStr: string): number {
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Human "time ago" for a last-contacted date — "Today", "Yesterday",
+ * "3 days ago", "2 weeks ago". Once it's older than a month it falls back to an
+ * absolute date ("Mar 4") since "37 days ago" stops being useful.
+ */
+export function formatRelativeDate(dateStr: string): string {
+  const days = getDaysSince(dateStr);
+  if (isNaN(days)) return '';
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return '1 week ago';
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return formatDate(dateStr);
+}
+
 export function getTagColor(tag: string): string {
   const colors = [
     'bg-blue-50 text-blue-600 border-blue-100',

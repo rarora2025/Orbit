@@ -1,12 +1,14 @@
 'use client';
 
-import { Contact, getNextAction } from '@/lib/mockData';
-import { formatShortDate, getDaysSince } from '@/lib/utils';
+import { Contact } from '@/lib/mockData';
+import { formatRelativeDate } from '@/lib/utils';
 import StatusPill from './StatusPill';
-import TagChip from './TagChip';
 import CompanyLogo from './CompanyLogo';
+import TemperatureStars from './TemperatureStars';
+import TemperatureInfo from './TemperatureInfo';
+import ContactDateBadge from './ContactDateBadge';
+import ContactLinks from './ContactLinks';
 import { companyDisplayName } from '@/lib/companyLogo';
-import { ExternalLink, Clock } from 'lucide-react';
 
 interface Props {
   contacts: Contact[];
@@ -14,7 +16,7 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-const HEADERS = ['Person', 'Company / Role', 'Status', 'Score', 'Last contact', 'Next action'];
+const HEADERS = ['Person', 'Company / Role', 'Status', 'Temperature', 'Date', 'Reach out'];
 
 export default function ContactTable({ contacts, selectedId, onSelect }: Props) {
   if (contacts.length === 0) {
@@ -40,16 +42,21 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   key={h}
                   className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider px-4 py-2.5 whitespace-nowrap"
                 >
-                  {h}
+                  {h === 'Temperature' ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      {h}
+                      <TemperatureInfo />
+                    </span>
+                  ) : (
+                    h
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {contacts.map((contact) => {
-              const days = getDaysSince(contact.lastContacted);
               const isSelected = selectedId === contact.id;
-              const isOverdue = contact.status === 'Pending' && days > 7;
               const companyLabel = companyDisplayName(contact.company);
               const companyInitial = (companyLabel || contact.name).charAt(0).toUpperCase();
 
@@ -57,7 +64,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                 <tr
                   key={contact.id}
                   onClick={() => onSelect(contact.id)}
-                  className={`group cursor-pointer border-b border-stone-100 last:border-0 transition-colors ${
+                  className={`table-row group cursor-pointer border-b border-stone-100 last:border-0 transition-colors ${
                     isSelected ? 'bg-orange-50/70' : 'hover:bg-stone-50/70'
                   }`}
                 >
@@ -65,25 +72,13 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   <td className="px-4 py-3 relative">
                     {isSelected && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-400 rounded-r" />}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 flex items-center justify-center text-[13px] font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 flex items-center justify-center text-[13px] font-bold flex-shrink-0 transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-0.5">
                         {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </div>
                       <div className="min-w-0">
                         <p className="text-[15px] font-semibold text-stone-800 leading-tight truncate">
                           {contact.name}
                         </p>
-                        {contact.linkedinUrl && (
-                          <a
-                            href={contact.linkedinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-0.5 text-[12px] mt-0.5 text-stone-400 hover:text-blue-600"
-                          >
-                            <ExternalLink size={9} />
-                            LinkedIn
-                          </a>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -113,33 +108,26 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                     <StatusPill status={contact.status} size="sm" />
                   </td>
 
-                  {/* Score */}
+                  {/* Temperature — same star gauge as the board */}
                   <td className="px-4 py-3">
-                    <div className="w-[30px] h-[30px] rounded-full border-[1.5px] border-orange-400 flex items-center justify-center">
-                      <span className="text-[13px] font-bold text-orange-500 leading-none">{contact.score}</span>
-                    </div>
+                    <span className="inline-flex transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-0.5">
+                      <TemperatureStars warmth={contact.warmth} size={15} />
+                    </span>
                   </td>
 
-                  {/* Last contact */}
+                  {/* Last contacted (relative) + next follow-up — same badge as the board */}
                   <td className="px-4 py-3">
-                    <div className={`flex items-center gap-1 text-[14px] ${isOverdue ? 'text-orange-600 font-medium' : 'text-stone-500'}`}>
-                      {isOverdue && <Clock size={11} />}
-                      <span>{formatShortDate(contact.lastContacted)}</span>
-                      <span className="text-stone-300">·</span>
-                      <span className="text-stone-400">{days}d</span>
-                    </div>
-                  </td>
-
-                  {/* Next action */}
-                  <td className="px-4 py-3 max-w-[240px]">
-                    {contact.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {contact.tags.slice(0, 2).map(tag => <TagChip key={tag} tag={tag} />)}
+                    <div className="space-y-1.5">
+                      <div className="text-[13px] text-stone-600">
+                        {contact.lastContacted ? formatRelativeDate(contact.lastContacted) : <span className="text-stone-300">Not contacted yet</span>}
                       </div>
-                    )}
-                    <p className="text-[13px] text-stone-500 leading-relaxed line-clamp-2">
-                      {getNextAction(contact)}
-                    </p>
+                      <ContactDateBadge contact={contact} />
+                    </div>
+                  </td>
+
+                  {/* Reach out — quick links (LinkedIn · email · phone) */}
+                  <td className="px-4 py-3">
+                    <ContactLinks contact={contact} size={16} />
                   </td>
                 </tr>
               );

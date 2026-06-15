@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
+import MessageViewModal from './MessageViewModal';
 import { formatDate } from '@/lib/utils';
-import { X, Pencil, Star, Mail, Link2, ExternalLink } from 'lucide-react';
+import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink } from 'lucide-react';
 
 interface Props {
   /** The selected contact, or null when the panel is closed. */
@@ -17,7 +18,11 @@ interface Props {
   onMarkMet: (contact: Contact) => void;
   onMoveToLongTerm: (contact: Contact) => void;
   onMarkGhosted: (contact: Contact) => void;
+  onSetFollowUp: (contact: Contact) => void;
 }
+
+/** Interactions whose text can be opened in a read-only popup. */
+const VIEWABLE_TYPES = new Set(['message_sent', 'message_drafted', 'response_logged']);
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
@@ -36,12 +41,11 @@ const NODE_COLOR: Record<string, string> = {
   response_logged: 'bg-emerald-500',
   meeting_scheduled: 'bg-indigo-500',
   meeting_completed: 'bg-teal-500',
-  note_added: 'bg-purple-500',
   status_changed: 'bg-stone-400',
 };
 
-/** Interaction types whose free-text content is worth showing (notes are the point). */
-const BODY_TYPES = new Set(['note_added', 'meeting_completed']);
+/** Interaction types whose free-text content is worth showing inline. */
+const BODY_TYPES = new Set(['meeting_completed']);
 
 /** The colored detail line (a scheduled date), or null. */
 function timelineDetail(it: Interaction): { text: string; className: string } | null {
@@ -59,13 +63,16 @@ function timelineDetail(it: Interaction): { text: string; className: string } | 
 
 export default function ContactDetailPanel({
   contact, onClose, onEdit, onDraft, onLogResponse,
-  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted,
+  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted, onSetFollowUp,
 }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
   // React's endorsed pattern for deriving from a changing prop.
   const [shown, setShown] = useState<Contact | null>(contact);
   if (contact && contact !== shown) setShown(contact);
+
+  // A timeline message opened in the read-only viewer, or null.
+  const [viewMessage, setViewMessage] = useState<Interaction | null>(null);
 
   const open = !!contact;
   const c = contact ?? shown;
@@ -75,6 +82,7 @@ export default function ContactDetailPanel({
   const followUp = c ? followUpLabel(c) : null;
 
   return (
+    <>
     <div
       className={`flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${open ? 'w-[384px]' : 'w-0'}`}
       aria-hidden={!open}
@@ -152,6 +160,9 @@ export default function ContactDetailPanel({
                     {c.linkedinUrl
                       ? <InfoLink icon={<Link2 size={14} />} href={c.linkedinUrl} label="LinkedIn profile" external />
                       : <InfoEmpty icon={<Link2 size={14} />} label="No LinkedIn" />}
+                    {c.phone
+                      ? <InfoLink icon={<Phone size={14} />} href={`tel:${c.phone}`} label={c.phone} />
+                      : <InfoEmpty icon={<Phone size={14} />} label="No phone" />}
                   </div>
                 </Section>
 
@@ -182,6 +193,10 @@ export default function ContactDetailPanel({
                       {LONG_TERM_FROM.includes(c.status) && (
                         <button type="button" onClick={() => onMoveToLongTerm(c)} className={ACTION_BTN}>Move to long-term</button>
                       )}
+                      {/* Available on every status — set when to send/follow up next. */}
+                      <button type="button" onClick={() => onSetFollowUp(c)} className={ACTION_BTN}>
+                        {c.status === 'Send' ? 'Schedule send' : 'Set follow-up'}
+                      </button>
                     </div>
                   </div>
                 </Section>
@@ -197,19 +212,30 @@ export default function ContactDetailPanel({
                         {timeline.map((it) => {
                           const detail = timelineDetail(it);
                           const showBody = BODY_TYPES.has(it.type) && it.content;
+                          const isResponse = it.type === 'response_logged';
+                          const showView = VIEWABLE_TYPES.has(it.type) && !!it.content;
+                          // For a generic status move, show what it became ("Moved to
+                          // Pending"); otherwise the event's label. Never "Status changed".
+                          const label = it.type === 'status_changed' && it.content
+                            ? it.content
+                            : INTERACTION_LABEL[it.type] ?? it.type;
                           return (
                             <li key={it.id} className="relative pl-5">
                               <span className={`absolute left-[1px] top-[5px] w-2.5 h-2.5 rounded-full ring-2 ring-white ${NODE_COLOR[it.type] ?? 'bg-stone-300'}`} />
                               <div className="flex items-baseline gap-2">
-                                <span className="text-[12.5px] font-semibold text-stone-700">{INTERACTION_LABEL[it.type] ?? it.type}</span>
+                                <span className="text-[12.5px] font-semibold text-stone-700">{label}</span>
                                 <span className="text-[11px] text-stone-400 ml-auto flex-shrink-0">{formatDate(it.date)}</span>
                               </div>
                               {detail && <div className={`text-[11.5px] font-medium mt-0.5 ${detail.className}`}>{detail.text}</div>}
                               {showBody && <p className="text-[12.5px] text-stone-600 leading-relaxed mt-0.5 whitespace-pre-line">{it.content}</p>}
-                              {it.nextStep && (
-                                <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-[11px] font-medium text-orange-600">
-                                  Next: {it.nextStep}
-                                </span>
+                              {showView && (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewMessage(it)}
+                                  className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                                >
+                                  {isResponse ? 'View response' : 'View message'}
+                                </button>
                               )}
                             </li>
                           );
@@ -224,6 +250,16 @@ export default function ContactDetailPanel({
         </div>
       </div>
     </div>
+
+    {viewMessage && (
+      <MessageViewModal
+        title={(viewMessage.type === 'response_logged' ? `Response from ${c?.name ?? ''}` : `Message to ${c?.name ?? ''}`).trim()}
+        channel={viewMessage.channel}
+        content={viewMessage.content}
+        onClose={() => setViewMessage(null)}
+      />
+    )}
+    </>
   );
 }
 

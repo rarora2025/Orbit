@@ -79,7 +79,19 @@ export async function moveContact(id: string, toStatus: Status, beforeId: string
   const current = existing.find((c) => c.id === id);
   if (!current) throw new Error('Contact not found');
   const position = positionBefore(existing, toStatus, beforeId, id);
-  const merged: Contact = { ...current, status: toStatus, position };
+
+  // Record a status_changed interaction when a drag actually moves the contact
+  // to a new column (not a same-column reorder), so the timeline stays live.
+  let interactions = current.interactions;
+  if (current.status !== toStatus) {
+    const logged = await insertInteraction(id, {
+      type: 'status_changed',
+      content: `Moved to ${toStatus}`,
+    });
+    interactions = [...current.interactions, logged];
+  }
+
+  const merged: Contact = { ...current, status: toStatus, position, interactions };
   const { data, error } = await supabaseAdmin
     .from('contacts')
     // Strip interactions from the blob; the table is the source of truth.
@@ -249,12 +261,6 @@ export async function markMet(contactId: string, input: MetInput): Promise<Conta
   return persist(userId, contactId, { ...current, status: 'Met', nextFollowUpAt, interactions });
 }
 
-export async function addNote(contactId: string, content: string): Promise<Contact> {
-  const { userId, current } = await requireContact(contactId);
-  const interaction = await insertInteraction(contactId, { type: 'note_added', content: content.trim() });
-  return persist(userId, contactId, { ...current, interactions: [...current.interactions, interaction] });
-}
-
 export async function setFollowUp(contactId: string, input: FollowUpInput): Promise<Contact> {
   const { userId, current } = await requireContact(contactId);
   const reason = input.reason?.trim();
@@ -267,6 +273,12 @@ export async function setFollowUp(contactId: string, input: FollowUpInput): Prom
     nextFollowUpAt: dueAt,
     interactions: [...current.interactions, interaction],
   });
+}
+
+/** Clear a contact's next-action date (the follow-up / send-by date). */
+export async function clearFollowUp(contactId: string): Promise<Contact> {
+  const { userId, current } = await requireContact(contactId);
+  return persist(userId, contactId, { ...current, nextFollowUpAt: undefined });
 }
 
 /**

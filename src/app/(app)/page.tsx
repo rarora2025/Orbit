@@ -3,23 +3,38 @@
 import { useMemo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
-import { buildNextMoves, NextMove, MoveKind } from '@/lib/nextMoves';
+import { buildNextMoves, dueSoonCutoff, NextMove, MoveKind } from '@/lib/nextMoves';
 import { buildUpcoming } from '@/lib/upcoming';
 import DraftModal from '@/components/DraftModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import LinkedInIcon from '@/components/LinkedInIcon';
-import { Send, MessageCircle, Calendar, Clock, Check, X, Mail } from 'lucide-react';
+import { Check, X, Mail } from 'lucide-react';
 
-const KIND_ICON: Record<MoveKind, typeof Send> = {
-  'follow-up': Clock,
-  'reply': MessageCircle,
-  'outreach': Send,
+// Each move maps to a status; label + dot mirror the board's pill language
+// instead of a glyph tile, so the two views read the same.
+const KIND_LABEL: Record<MoveKind, string> = {
+  'follow-up': 'Follow-up',
+  'reply': 'Reply',
+  'outreach': 'Outreach',
 };
 
-const KIND_TINT: Record<MoveKind, string> = {
-  'follow-up': 'bg-red-50 text-red-500',
-  'reply': 'bg-emerald-50 text-emerald-600',
-  'outreach': 'bg-blue-50 text-blue-600',
+const KIND_DOT: Record<MoveKind, string> = {
+  'follow-up': 'bg-amber-400',
+  'reply': 'bg-emerald-500',
+  'outreach': 'bg-blue-500',
+};
+
+const KIND_PILL: Record<MoveKind, string> = {
+  'follow-up': 'bg-amber-50 text-amber-700',
+  'reply': 'bg-emerald-50 text-emerald-700',
+  'outreach': 'bg-blue-50 text-blue-700',
+};
+
+// Tag styles for the Upcoming list — same pill language as the move cards.
+const UPCOMING_TAG: Record<string, { dot: string; pill: string }> = {
+  'Meeting': { dot: 'bg-indigo-500', pill: 'bg-indigo-50 text-indigo-700' },
+  'Follow-up': { dot: 'bg-amber-400', pill: 'bg-amber-50 text-amber-700' },
+  'Send': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-700' },
 };
 
 function greeting(date: Date): string {
@@ -31,14 +46,21 @@ function greeting(date: Date): string {
 
 export default function InsightsPage() {
   const { user } = useUser();
-  const { contacts, loaded, updateContact, saveDraft, markSent } = useCRMStore();
+  const { contacts, loaded, saveDraft, markSent } = useCRMStore();
   const composer = useDraftComposer();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const now = new Date();
   const allMoves = useMemo(() => buildNextMoves(contacts, new Date()), [contacts]);
   const moves = allMoves.filter((m) => !dismissed.has(m.id));
-  const upcoming = useMemo(() => buildUpcoming(contacts, new Date()), [contacts]);
+  // Upcoming is the forward agenda: all meetings, plus follow-ups that are
+  // further out than the "next moves" window (so imminent ones aren't shown twice).
+  const upcoming = useMemo(() => {
+    const cutoff = dueSoonCutoff(new Date());
+    return buildUpcoming(contacts, new Date()).filter(
+      (item) => item.kind === 'meeting' || new Date(item.at).getTime() > cutoff
+    );
+  }, [contacts]);
 
   function draftFor(contactId: string, kind: MoveKind) {
     const c = contacts.find((x) => x.id === contactId);
@@ -46,14 +68,12 @@ export default function InsightsPage() {
   }
 
   const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? 'there';
-  const today = () => new Date().toISOString().split('T')[0];
 
-  function schedule(move: NextMove) {
-    updateContact(move.contactId, { status: 'Meeting Scheduled' });
-  }
-  // Marking done moves them to Pending with today's date, so the move drops off.
+  // "Done" = "I sent this." Log it as a sent message so the timeline reads
+  // "Marked message as sent" (not a silent status flip) and the thread advances
+  // to Pending with a fresh follow-up — the move then drops off the list.
   function markDone(move: NextMove) {
-    updateContact(move.contactId, { status: 'Pending', lastContacted: today() });
+    markSent(move.contactId, { channel: 'manual', content: '' });
   }
   function dismiss(move: NextMove) {
     setDismissed((prev) => new Set(prev).add(move.id));
@@ -76,11 +96,12 @@ export default function InsightsPage() {
             <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
               {upcoming.map((item) => (
                 <div key={`${item.contactId}-${item.kind}-${item.at}`} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-stone-200 bg-white">
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.kind === 'meeting' ? 'bg-indigo-50 text-indigo-600' : item.overdue ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-                    {item.kind === 'meeting' ? <Calendar size={14} /> : <Clock size={14} />}
+                  <span className={`inline-flex items-center gap-1.5 flex-shrink-0 pl-2 pr-2.5 py-1 rounded-full text-[11px] font-semibold ${UPCOMING_TAG[item.tag].pill}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${UPCOMING_TAG[item.tag].dot}`} />
+                    {item.tag}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-stone-800 truncate">{item.label}</p>
+                    <p className="text-[13px] font-semibold text-stone-800 truncate">{item.contactName}</p>
                     <p className={`text-[11px] ${item.overdue ? 'text-red-600 font-medium' : 'text-stone-400'}`}>{item.when}</p>
                   </div>
                   <button
@@ -127,7 +148,6 @@ export default function InsightsPage() {
                     linkedinUrl={c?.linkedinUrl}
                     email={c?.email}
                     onDraft={() => { if (c) composer.open({ contact: c, kind: move.kind }); }}
-                    onSchedule={() => schedule(move)}
                     onDone={() => markDone(move)}
                     onDismiss={() => dismiss(move)}
                   />
@@ -158,24 +178,23 @@ export default function InsightsPage() {
 }
 
 function MoveCard({
-  move, linkedinUrl, email, onDraft, onSchedule, onDone, onDismiss,
+  move, linkedinUrl, email, onDraft, onDone, onDismiss,
 }: {
   move: NextMove;
   linkedinUrl?: string;
   email?: string;
   onDraft: () => void;
-  onSchedule: () => void;
   onDone: () => void;
   onDismiss: () => void;
 }) {
-  const Icon = KIND_ICON[move.kind];
   return (
     <div className="w-[276px] flex-shrink-0 h-full max-h-[420px] flex flex-col rounded-2xl border border-stone-200 bg-stone-50/60 overflow-hidden">
       {/* Card head */}
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
-          <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${KIND_TINT[move.kind]}`}>
-            <Icon size={16} />
+          <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full text-[11px] font-semibold ${KIND_PILL[move.kind]}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${KIND_DOT[move.kind]}`} />
+            {KIND_LABEL[move.kind]}
           </span>
           <button
             type="button"
@@ -188,10 +207,7 @@ function MoveCard({
         </div>
         <p className="text-[15px] font-bold text-stone-900 leading-snug mt-3">{move.title}</p>
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="inline-flex items-center gap-1 text-[12px] text-stone-500">
-            <Clock size={11} className="text-stone-400" />
-            {move.detail}
-          </span>
+          <span className="text-[12px] text-stone-500">{move.detail}</span>
           {(linkedinUrl || email) && (
             <span className="flex items-center gap-0.5 ml-auto">
               {linkedinUrl && (
@@ -233,8 +249,7 @@ function MoveCard({
         >
           Draft message
         </button>
-        <div className="grid grid-cols-3 gap-1.5">
-          <SecondaryAction onClick={onSchedule} icon={<Calendar size={13} />} label="Schedule" />
+        <div className="grid grid-cols-2 gap-1.5">
           <SecondaryAction onClick={onDone} icon={<Check size={13} />} label="Done" />
           <SecondaryAction onClick={onDismiss} icon={<X size={13} />} label="Dismiss" />
         </div>

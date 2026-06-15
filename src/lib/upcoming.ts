@@ -25,6 +25,15 @@ export function meetingAt(c: Contact): string | undefined {
     .at(-1);
 }
 
+/**
+ * The next date you need to act on this contact: their scheduled meeting time
+ * (while in Meeting Scheduled), else their next follow-up. Undefined when there
+ * is nothing scheduled. Used to sort the table by what's due soonest.
+ */
+export function nextContactAt(c: Contact): string | undefined {
+  return meetingAt(c) ?? c.nextFollowUpAt;
+}
+
 export interface DateBadge {
   kind: 'meeting' | 'follow-up';
   overdue: boolean;
@@ -37,7 +46,12 @@ export function contactDateBadge(c: Contact, now: Date = new Date()): DateBadge 
   if (m) return { kind: 'meeting', overdue: false, label: `Meeting ${meetingShort(m)}` };
   if (c.nextFollowUpAt) {
     const overdue = new Date(c.nextFollowUpAt).getTime() < startOfDay(now);
-    return { kind: 'follow-up', overdue, label: overdue ? 'Follow-up overdue' : `Follow up ${dateShort(c.nextFollowUpAt)}` };
+    // A Send contact's date is a "send by", everyone else's is a "follow up".
+    const verb = c.status === 'Send' ? 'Send' : 'Follow up';
+    const label = overdue
+      ? (c.status === 'Send' ? 'Overdue to send' : 'Follow-up overdue')
+      : `${verb} ${dateShort(c.nextFollowUpAt)}`;
+    return { kind: 'follow-up', overdue, label };
   }
   return null;
 }
@@ -46,6 +60,8 @@ export interface UpcomingItem {
   contactId: string;
   contactName: string;
   kind: 'meeting' | 'follow-up';
+  /** Short pill label shown beside the name: "Meeting", "Follow-up", or "Send". */
+  tag: 'Meeting' | 'Follow-up' | 'Send';
   /** ISO datetime used for sorting. */
   at: string;
   overdue: boolean;
@@ -62,16 +78,18 @@ export function buildUpcoming(contacts: Contact[], now: Date = new Date()): Upco
     const m = meetingAt(c);
     if (m) {
       items.push({
-        contactId: c.id, contactName: c.name, kind: 'meeting', at: m,
+        contactId: c.id, contactName: c.name, kind: 'meeting', tag: 'Meeting', at: m,
         overdue: new Date(m).getTime() < startOfDay(now),
         label: `Meeting — ${c.name}`, when: meetingShort(m),
       });
     }
     if (c.nextFollowUpAt) {
       const overdue = new Date(c.nextFollowUpAt).getTime() < startOfDay(now);
+      const isSend = c.status === 'Send';
+      const verb = isSend ? 'Send' : 'Follow up';
       items.push({
-        contactId: c.id, contactName: c.name, kind: 'follow-up', at: c.nextFollowUpAt,
-        overdue, label: `Follow up — ${c.name}`,
+        contactId: c.id, contactName: c.name, kind: 'follow-up', tag: isSend ? 'Send' : 'Follow-up',
+        at: c.nextFollowUpAt, overdue, label: `${verb} — ${c.name}`,
         when: overdue ? 'Overdue' : dateShort(c.nextFollowUpAt),
       });
     }
