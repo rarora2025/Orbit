@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
+import { Contact, Interaction, Status, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import MessageViewModal from './MessageViewModal';
 import TemperatureInfo from './TemperatureInfo';
+import StatusMenu from './StatusMenu';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { formatDate } from '@/lib/utils';
 import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink } from 'lucide-react';
@@ -21,6 +22,7 @@ interface Props {
   onMoveToLongTerm: (contact: Contact) => void;
   onMarkGhosted: (contact: Contact) => void;
   onSetFollowUp: (contact: Contact) => void;
+  onChangeStatus: (id: string, status: Status) => void;
 }
 
 /** Interactions whose text can be opened in a read-only popup. */
@@ -65,7 +67,7 @@ function timelineDetail(it: Interaction): { text: string; className: string } | 
 
 export default function ContactDetailPanel({
   contact, onClose, onEdit, onDraft, onLogResponse,
-  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted, onSetFollowUp,
+  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted, onSetFollowUp, onChangeStatus,
 }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
@@ -135,10 +137,7 @@ export default function ContactDetailPanel({
 
                 {/* Status + temperature */}
                 <div className="flex items-center gap-2 mt-3.5">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full pl-2 pr-2.5 py-1 ${cfg.bg}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                    <span className={`text-[12px] font-semibold ${cfg.text}`}>{c.status}</span>
-                  </span>
+                  <StatusMenu status={c.status} onChange={(s) => onChangeStatus(c.id, s)} />
                   <span className="inline-flex items-center gap-0.5" title={`Temperature: ${c.warmth}`}>
                     {[1, 2, 3].map((i) => (
                       <Star key={i} size={13} className={i <= temp ? 'fill-orange-400 text-orange-400' : 'fill-stone-100 text-stone-200'} />

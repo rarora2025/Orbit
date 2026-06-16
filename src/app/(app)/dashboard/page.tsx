@@ -20,7 +20,7 @@ import { Plus } from 'lucide-react';
 export default function PipelinePage() {
   const {
     contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
-    saveDraft, markSent, logResponse, scheduleMeeting, markMet, moveToLongTerm, markGhosted, setFollowUp, clearFollowUp,
+    saveDraft, markSent, logResponse, scheduleMeeting, markMet, moveToLongTerm, markGhosted, setFollowUp, clearFollowUp, setStatus,
   } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -128,6 +128,7 @@ export default function PipelinePage() {
               contacts={sortedContacts}
               selectedId={selectedContactId}
               onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
+              onChangeStatus={(id, s) => setStatus(id, s)}
             />
           </div>
         )}
@@ -145,6 +146,7 @@ export default function PipelinePage() {
         onMoveToLongTerm={(contact) => moveToLongTerm(contact.id)}
         onMarkGhosted={(contact) => markGhosted(contact.id)}
         onSetFollowUp={(contact) => setFollowUpId(contact.id)}
+        onChangeStatus={(id, s) => setStatus(id, s)}
       />
 
       {/* Single unified add button */}

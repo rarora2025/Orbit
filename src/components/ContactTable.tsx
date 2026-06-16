@@ -1,8 +1,8 @@
 'use client';
 
-import { Contact } from '@/lib/mockData';
+import { Contact, Status } from '@/lib/mockData';
 import { formatRelativeDate } from '@/lib/utils';
-import StatusPill from './StatusPill';
+import StatusMenu from './StatusMenu';
 import CompanyLogo from './CompanyLogo';
 import TemperatureStars from './TemperatureStars';
 import TemperatureInfo from './TemperatureInfo';
@@ -14,11 +14,12 @@ interface Props {
   contacts: Contact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onChangeStatus: (id: string, status: Status) => void;
 }
 
 const HEADERS = ['Person', 'Company / Role', 'Status', 'Temperature', 'Date', 'Reach out'];
 
-export default function ContactTable({ contacts, selectedId, onSelect }: Props) {
+export default function ContactTable({ contacts, selectedId, onSelect, onChangeStatus }: Props) {
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -103,9 +104,13 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                     </div>
                   </td>
 
-                  {/* Status */}
+                  {/* Status — click to change (the menu stops propagation so it doesn't open the row) */}
                   <td className="px-4 py-3">
-                    <StatusPill status={contact.status} size="sm" />
+                    <StatusMenu
+                      status={contact.status}
+                      size="sm"
+                      onChange={(s) => onChangeStatus(contact.id, s)}
+                    />
                   </td>
 
                   {/* Temperature — same star gauge as the board */}
