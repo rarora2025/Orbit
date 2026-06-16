@@ -11,6 +11,7 @@ export interface OnboardingContactInput {
   company: string;
   role?: string;
   email?: string;
+  phone?: string;
   linkedinUrl?: string;
   tags?: string[];
   warmth?: Warmth;
@@ -52,6 +53,7 @@ function buildContact(input: OnboardingContactInput, index: number): Contact {
     role: input.role ?? '',
     linkedinUrl: input.linkedinUrl ?? '',
     email: input.email ?? '',
+    phone: input.phone ?? '',
     notes: '',
     status,
     score: 50,

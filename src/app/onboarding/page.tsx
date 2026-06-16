@@ -6,27 +6,49 @@ import { useUser } from '@clerk/nextjs';
 import OrbitLogo from '@/components/OrbitLogo';
 import { completeOnboarding, type OnboardingContactInput } from '@/lib/onboarding.actions';
 import { addGoal as createGoal, generateGoalImage, deleteGoal as removeGoalApi } from '@/lib/goals.actions';
-import {
-  GOAL_PLACEHOLDERS, ORB_COLORS, SAMPLE_CONTACTS, initials, type ContactSeed,
-} from '@/lib/onboardingSamples';
-import { CHAT_SUGGESTIONS } from '@/lib/chatSuggestions';
+import { companyLogoUrl } from '@/lib/companyLogo';
+import { GOAL_PLACEHOLDERS, ORB_COLORS, initials } from '@/lib/onboardingSamples';
 
-const STEP_COUNT = 4;
+const STEP_COUNT = 3;
 
-// Local display shape for an orb in the visual / import list. Sample people carry
-// their full seed; manually-added people fill in just the basics.
+// A person added to the orbit during onboarding (manual or imported).
 type Person = {
   name: string;
   company: string;
+  email?: string;
+  phone?: string;
+  /** Live company logo URL (favicon) for the orb badge, or null. */
   logo: string | null;
   color: string;
-  seed?: ContactSeed;
 };
 // `id` is set once the goal is created for real (so it can be deleted again).
 type GoalPick = { label: string; cl: string; id?: string };
 
-// Ambient floating dots — fixed positions (kept static so render stays pure and
-// SSR/CSR match). Purely decorative background motion behind the orbit stage.
+// One parsed import row.
+type ImportRow = { name: string; company?: string; email?: string; phone?: string };
+
+/** Parse pasted/CSV contact lines: "Name, Company, email, phone" in any order
+ *  after the name. Classifies fields heuristically; drops a header row. */
+function parseContactLines(text: string): ImportRow[] {
+  return text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split(/[\t,;]/).map((p) => p.trim()).filter(Boolean);
+      const name = parts[0] ?? '';
+      const row: ImportRow = { name };
+      for (const p of parts.slice(1)) {
+        if (p.includes('@')) row.email = p;
+        else if (/^[+\d()\-.\s]{6,}$/.test(p)) row.phone = p;
+        else if (!row.company) row.company = p;
+      }
+      return row;
+    })
+    .filter((r) => r.name && !/^(name|full name)$/i.test(r.name));
+}
+
+// Ambient floating dots — fixed positions (kept static so render stays pure).
 const AMB = [
   { left: 14, top: 22, size: 6, fd: 9, delay: -0.5 },
   { left: 78, top: 16, size: 9, fd: 11, delay: -3.2 },
@@ -38,18 +60,8 @@ const AMB = [
 ];
 
 /* ---------------- ORBIT VISUAL ---------------- */
-function OrbitVisual({
-  name, goals, contacts,
-}: {
-  name: string;
-  goals: GoalPick[];
-  contacts: Person[];
-}) {
-  const R_INNER = 20, R_MID = 36, R_OUTER = 50;
-  const goalNodes = goals.map((g, i) => {
-    const a = (i / Math.max(goals.length, 1)) * Math.PI * 2 - Math.PI / 2;
-    return { ...g, x: 50 + Math.cos(a) * R_INNER, y: 50 + Math.sin(a) * R_INNER, key: g.label };
-  });
+function OrbitVisual({ name, contacts }: { name: string; contacts: Person[] }) {
+  const R_MID = 36, R_OUTER = 50;
   const split = contacts.map((c, i) => {
     const ring = i % 2 === 0 ? 'mid' : 'outer';
     const same = contacts.filter((_, j) => (j % 2 === 0) === (i % 2 === 0));
@@ -61,28 +73,15 @@ function OrbitVisual({
   const mid = split.filter((c) => c.ring === 'mid');
   const outer = split.filter((c) => c.ring === 'outer');
 
-  const amb = AMB;
-
   return (
     <div className="orbit-wrap">
-      {amb.map((a, i) => (
+      {AMB.map((a, i) => (
         <span key={i} className="amb" style={{ left: a.left + '%', top: a.top + '%', width: a.size, height: a.size, ['--fd' as string]: a.fd + 's', animationDelay: a.delay + 's' }} />
       ))}
       <div className="ov-stage">
-        <div className={'ov-track t-inner' + (goals.length ? ' lit' : '')} />
+        <div className="ov-track t-inner" />
         <div className={'ov-track t-mid' + (mid.length ? ' lit' : '')} />
         <div className={'ov-track t-outer' + (outer.length ? ' lit' : '')} />
-
-        {/* inner ring: goals */}
-        <div className="ov-ring r-inner">
-          {goalNodes.map((g) => (
-            <div className="node" key={g.key} style={{ left: g.x + '%', top: g.y + '%' }}>
-              <div className="upright pop">
-                <span className="goal-sat"><span className="gd" style={{ background: g.cl }} />{g.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
 
         {/* mid ring contacts */}
         <div className="ov-ring r-mid">
@@ -124,13 +123,7 @@ function OrbitVisual({
 }
 
 /* ---------------- STEPS ---------------- */
-function StepIdentity({
-  name, setName, email,
-}: {
-  name: string;
-  setName: (v: string) => void;
-  email: string;
-}) {
+function StepIdentity({ name, setName, email }: { name: string; setName: (v: string) => void; email: string }) {
   return (
     <div className="step-key anim-in">
       <div>
@@ -157,15 +150,8 @@ function StepIdentity({
   );
 }
 
-function StepGoals({
-  goals, addGoal, removeGoal,
-}: {
-  goals: GoalPick[];
-  addGoal: (label: string) => void;
-  removeGoal: (label: string) => void;
-}) {
+function StepGoals({ goals, addGoal, removeGoal }: { goals: GoalPick[]; addGoal: (label: string) => void; removeGoal: (label: string) => void }) {
   const [custom, setCustom] = useState('');
-  // Cycle the placeholder through example goals while the field is empty.
   const [ph, setPh] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setPh((p) => (p + 1) % GOAL_PLACEHOLDERS.length), 2600);
@@ -205,20 +191,24 @@ function StepGoals({
   );
 }
 
-function StepContacts({
-  contacts, importAll, addManual,
-}: {
-  contacts: Person[];
-  importAll: () => void;
-  addManual: (name: string, company: string) => void;
-}) {
-  const [mode, setMode] = useState<null | 'importing' | 'manual'>(null);
+function StepContacts({ contacts, addPeople, addManual }: { contacts: Person[]; addPeople: (rows: ImportRow[]) => void; addManual: (name: string, company: string) => void }) {
+  const [mode, setMode] = useState<null | 'import' | 'manual'>(null);
+  const [paste, setPaste] = useState('');
   const [mName, setMName] = useState('');
   const [mCo, setMCo] = useState('');
 
-  const doImport = () => { setMode('importing'); importAll(); };
   const doManual = () => {
     if (mName.trim()) { addManual(mName.trim(), mCo.trim()); setMName(''); setMCo(''); }
+  };
+  const doPaste = () => {
+    const rows = parseContactLines(paste);
+    if (rows.length) { addPeople(rows); setPaste(''); }
+  };
+  const onFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { const rows = parseContactLines(String(reader.result ?? '')); if (rows.length) addPeople(rows); };
+    reader.readAsText(file);
   };
 
   return (
@@ -227,15 +217,15 @@ function StepContacts({
         <h1 className="q">Bring your network in.</h1>
       </div>
 
-      {mode !== 'manual' && (
+      {mode === null && (
         <div className="opts">
-          <button className={'opt' + (mode === 'importing' ? ' busy' : '')} onClick={doImport}>
+          <button className="opt" onClick={() => setMode('import')}>
             <span className="oic">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 21h16" /></svg>
             </span>
             <span className="ot">
-              <h3>{mode === 'importing' ? 'Importing…' : 'Import contacts'}</h3>
-              <p>Sync from Google, LinkedIn, or a CSV</p>
+              <h3>Import contacts</h3>
+              <p>Upload a CSV or paste a list of people</p>
             </span>
             <svg className="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </button>
@@ -252,6 +242,26 @@ function StepContacts({
         </div>
       )}
 
+      {mode === 'import' && (
+        <div className="manual">
+          <label className="import-drop">
+            <input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 8l5-5 5 5" /><path d="M4 21h16" /></svg>
+            Upload a CSV
+          </label>
+          <textarea
+            className="inp import-paste"
+            placeholder={'Or paste one person per line:\nJane Chen, Acme, jane@acme.com, 202 555 0198'}
+            value={paste}
+            onChange={(e) => setPaste(e.target.value)}
+          />
+          <div className="row">
+            <button className="mini-btn" onClick={doPaste} disabled={!paste.trim()}>Add pasted</button>
+            <button className="skip" style={{ marginLeft: 'auto' }} onClick={() => setMode(null)}>← Back</button>
+          </div>
+        </div>
+      )}
+
       {mode === 'manual' && (
         <div className="manual">
           <div className="row">
@@ -259,7 +269,7 @@ function StepContacts({
             <input className="inp" placeholder="Company" value={mCo} onChange={(e) => setMCo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && doManual()} />
             <button className="mini-btn" onClick={doManual}>Add</button>
           </div>
-          <button className="skip" style={{ alignSelf: 'flex-start', marginLeft: -4 }} onClick={() => setMode(null)}>← Back to import</button>
+          <button className="skip" style={{ alignSelf: 'flex-start', marginLeft: -4 }} onClick={() => setMode(null)}>← Back</button>
         </div>
       )}
 
@@ -282,35 +292,6 @@ function StepContacts({
   );
 }
 
-function StepAsk({
-  draft, setDraft, finish,
-}: {
-  draft: string;
-  setDraft: (v: string) => void;
-  finish: (q: string) => void;
-}) {
-  return (
-    <div className="step-key anim-in">
-      <div>
-        <h1 className="q">Ask Orbit anything.</h1>
-      </div>
-      <div className="ask">
-        <div className="ask-sugs">
-          {CHAT_SUGGESTIONS.map((s) => (
-            <button key={s} className="sug" onClick={() => finish(s)}><span className="sp" />{s}</button>
-          ))}
-        </div>
-        <div className="ask-input">
-          <input className="inp" placeholder="Ask about your network…" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && draft.trim() && finish(draft)} autoFocus />
-          <button className="send" disabled={!draft.trim()} onClick={() => draft.trim() && finish(draft)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ---------------- PAGE ---------------- */
@@ -325,8 +306,7 @@ export default function OnboardingPage() {
 function OnboardingFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Test mode (?test=1): walk the whole flow without persisting anything — used
-  // by the sidebar "Test onboarding" affordance. Lets already-onboarded users in.
+  // Test mode (?test=1): walk the flow without persisting anything.
   const testMode = searchParams.get('test') === '1';
   const { user, isLoaded } = useUser();
 
@@ -335,31 +315,23 @@ function OnboardingFlow() {
   const [email, setEmail] = useState('');
   const [goals, setGoals] = useState<GoalPick[]>([]);
   const [contacts, setContacts] = useState<Person[]>([]);
-  const [draft, setDraft] = useState('');
   const [phase, setPhase] = useState<'onboard' | 'launch'>('onboard');
   const [prefilled, setPrefilled] = useState(false);
 
   const alreadyOnboarded = isLoaded && user?.unsafeMetadata?.onboarded === true;
 
-  // Bounce anyone who has already finished onboarding back to the app — unless
-  // they're explicitly here to test the flow.
   useEffect(() => {
     if (alreadyOnboarded && !testMode) router.replace('/');
   }, [alreadyOnboarded, testMode, router]);
 
-  // Prefill identity from Clerk once it loads. Render-time derived-state pattern
-  // (guarded by `prefilled`) — same approach as CompanyLogo — so we never call
-  // setState inside an effect.
   if (isLoaded && user && !prefilled) {
     setPrefilled(true);
     setName(user.fullName || '');
     setEmail(user.primaryEmailAddress?.emailAddress ?? '');
   }
 
-  // Create the goal for real as it's typed — same path as the rest of the app
-  // (a Goal row, then an AI photo generated in the background). Test mode keeps
-  // it local-only so nothing is written. The orbit satellite shows immediately;
-  // the real id is patched in once the row exists so it can be removed again.
+  // Create the goal for real as it's typed (a Goal row + a background AI photo).
+  // Goals are intentionally NOT shown in the orbit visual.
   const addGoalLive = async (label: string) => {
     const t = label.trim();
     if (!t || goals.some((g) => g.label.toLowerCase() === t.toLowerCase())) return;
@@ -380,68 +352,64 @@ function OnboardingFlow() {
     if (!testMode && target?.id) void removeGoalApi(target.id).catch(console.error);
   };
 
-  const importAll = () => {
-    SAMPLE_CONTACTS.forEach((c, i) => {
-      setTimeout(() => setContacts((cs) => cs.some((x) => x.name === c.name)
-        ? cs
-        : [...cs, { name: c.name, company: c.company, logo: c.logo, color: c.color, seed: c }]), 140 * i + 120);
+  const personFrom = (row: ImportRow, idx: number): Person => ({
+    name: row.name,
+    company: row.company || '—',
+    email: row.email,
+    phone: row.phone,
+    logo: row.company ? companyLogoUrl(row.company) : null,
+    color: ORB_COLORS[idx % ORB_COLORS.length],
+  });
+  const addPeople = (rows: ImportRow[]) =>
+    setContacts((cs) => {
+      const have = new Set(cs.map((c) => c.name.toLowerCase()));
+      const fresh = rows.filter((r) => !have.has(r.name.toLowerCase())).map((r, i) => personFrom(r, cs.length + i));
+      return [...cs, ...fresh];
     });
-  };
   const addManual = (nm: string, co: string) =>
-    setContacts((cs) => [...cs, { name: nm, company: co || '—', logo: null, color: ORB_COLORS[cs.length % ORB_COLORS.length] }]);
+    setContacts((cs) => [...cs, personFrom({ name: nm, company: co }, cs.length)]);
 
+  const isLast = step === STEP_COUNT - 1;
   const canNext = step === 0 ? name.trim().length > 0 : true;
   const next = () => setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  async function finish(q: string) {
+  async function finish() {
     setPhase('launch');
 
-    if (testMode) {
-      // Preview only — persist nothing, just show the launch beat and land in chat.
-      await delay(1400);
-      router.replace(`/chat?q=${encodeURIComponent(q)}`);
-      return;
-    }
-
-    const payloadContacts: OnboardingContactInput[] = contacts.map((c) =>
-      c.seed
-        ? {
-            name: c.seed.name, company: c.seed.company, role: c.seed.role,
-            email: c.seed.email, linkedinUrl: c.seed.linkedinUrl, tags: c.seed.tags,
-            warmth: c.seed.warmth, status: c.seed.status,
-          }
-        : { name: c.name, company: c.company === '—' ? '' : c.company },
-    );
-
-    try {
-      await Promise.all([
-        completeOnboarding({ contacts: payloadContacts }),
-        delay(1400),
-      ]);
-      if (user) {
-        // Persist an edited display name back to Clerk (best-effort), and flag
-        // the account so we never re-run onboarding for it.
-        const trimmed = name.trim();
-        const profileChanged = trimmed && trimmed !== (user.fullName ?? '');
-        const [firstName, ...rest] = trimmed.split(/\s+/);
-        await user.update({
-          ...(profileChanged ? { firstName, lastName: rest.join(' ') } : {}),
-          unsafeMetadata: { ...user.unsafeMetadata, onboarded: true },
-        });
+    if (!testMode) {
+      const payloadContacts: OnboardingContactInput[] = contacts.map((c) => ({
+        name: c.name,
+        company: c.company === '—' ? '' : c.company,
+        email: c.email,
+        phone: c.phone,
+      }));
+      try {
+        await Promise.all([completeOnboarding({ contacts: payloadContacts }), delay(1500)]);
+        if (user) {
+          const trimmed = name.trim();
+          const profileChanged = trimmed && trimmed !== (user.fullName ?? '');
+          const [firstName, ...rest] = trimmed.split(/\s+/);
+          await user.update({
+            ...(profileChanged ? { firstName, lastName: rest.join(' ') } : {}),
+            unsafeMetadata: { ...user.unsafeMetadata, onboarded: true },
+          });
+        }
+      } catch (e) {
+        console.error('Onboarding completion failed', e);
       }
-    } catch (e) {
-      console.error('Onboarding completion failed', e);
+    } else {
+      await delay(1500);
     }
 
-    router.replace(`/chat?q=${encodeURIComponent(q)}`);
+    router.replace('/');
   }
 
   return (
     <div className="orbit-onboard">
       <div className="stage">
         <div className="visual">
-          <OrbitVisual name={name} goals={goals} contacts={contacts} />
+          <OrbitVisual name={name} contacts={contacts} />
         </div>
 
         <div className="panel">
@@ -450,7 +418,7 @@ function OnboardingFlow() {
             {testMode && <span className="test-badge">Test mode · nothing saved</span>}
             <span className="spacer" />
             {step === 1 && <button className="skip" onClick={next}>Skip for now</button>}
-            {step === 2 && contacts.length === 0 && <button className="skip" onClick={next}>I&apos;ll do this later</button>}
+            {step === 2 && contacts.length === 0 && <button className="skip" onClick={() => finish()}>I&apos;ll do this later</button>}
           </div>
 
           <div className="stepper">
@@ -463,26 +431,23 @@ function OnboardingFlow() {
             <div key={step}>
               {step === 0 && <StepIdentity name={name} setName={setName} email={email} />}
               {step === 1 && <StepGoals goals={goals} addGoal={addGoalLive} removeGoal={removeGoalLive} />}
-              {step === 2 && <StepContacts contacts={contacts} importAll={importAll} addManual={addManual} />}
-              {step === 3 && <StepAsk draft={draft} setDraft={setDraft} finish={finish} />}
+              {step === 2 && <StepContacts contacts={contacts} addPeople={addPeople} addManual={addManual} />}
             </div>
           </div>
 
-          {step < 3 && (
-            <div className="pfoot">
-              {step > 0 && (
-                <button className="btn btn-back" onClick={back} aria-label="Back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
-                </button>
-              )}
-              <button className="btn btn-primary" disabled={!canNext} onClick={next}>
-                {step === 0 && 'Continue'}
-                {step === 1 && (goals.length ? `Continue with ${goals.length} ${goals.length === 1 ? 'goal' : 'goals'}` : 'Continue')}
-                {step === 2 && (contacts.length ? `Continue with ${contacts.length}` : 'Continue')}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          <div className="pfoot">
+            {step > 0 && (
+              <button className="btn btn-back" onClick={back} aria-label="Back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
               </button>
-            </div>
-          )}
+            )}
+            <button className="btn btn-primary" disabled={!canNext} onClick={() => (isLast ? finish() : next())}>
+              {step === 0 && 'Continue'}
+              {step === 1 && (goals.length ? `Continue with ${goals.length} ${goals.length === 1 ? 'goal' : 'goals'}` : 'Continue')}
+              {step === 2 && (contacts.length ? `Enter Orbit with ${contacts.length}` : 'Enter Orbit')}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
+          </div>
         </div>
 
         {phase === 'launch' && (
