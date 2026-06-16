@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import MessageViewModal from './MessageViewModal';
+import TemperatureInfo from './TemperatureInfo';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { formatDate } from '@/lib/utils';
 import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink } from 'lucide-react';
@@ -143,6 +144,7 @@ export default function ContactDetailPanel({
                       <Star key={i} size={13} className={i <= temp ? 'fill-orange-400 text-orange-400' : 'fill-stone-100 text-stone-200'} />
                     ))}
                   </span>
+                  <TemperatureInfo />
                 </div>
               </div>
 
