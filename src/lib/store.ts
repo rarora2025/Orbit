@@ -23,6 +23,7 @@ interface CRMStore {
   clearFollowUp: (contactId: string) => Promise<void>;
   moveToLongTerm: (contactId: string) => Promise<void>;
   markGhosted: (contactId: string) => Promise<void>;
+  setStatus: (contactId: string, toStatus: Status) => Promise<void>;
   selectContact: (id: string | null) => void;
 }
 
@@ -59,6 +60,7 @@ export const useCRMStore = create<CRMStore>()((set) => {
     clearFollowUp: async (contactId) => { upsertLocal(await api.clearFollowUp(contactId)); },
     moveToLongTerm: async (contactId) => { upsertLocal(await api.changeStatusLogged(contactId, 'Long-term', 'Moved to long-term')); },
     markGhosted: async (contactId) => { upsertLocal(await api.changeStatusLogged(contactId, 'Ghosted', 'Marked as ghosted')); },
+    setStatus: async (contactId, toStatus) => { upsertLocal(await api.changeStatusLogged(contactId, toStatus, `Moved to ${toStatus}`)); },
     selectContact: (id) => set({ selectedContactId: id }),
   };
 });
