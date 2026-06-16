@@ -51,7 +51,7 @@ function greeting(date: Date): string {
 export default function InsightsPage() {
   const { user } = useUser();
   const { contacts, loaded, saveDraft, markSent } = useCRMStore();
-  const { goals, loaded: goalsLoaded, addGoal } = useGoalsStore();
+  const { goals, loaded: goalsLoaded, generatingImageIds, addGoal } = useGoalsStore();
   const composer = useDraftComposer();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [creatingGoal, setCreatingGoal] = useState(false);
@@ -110,7 +110,7 @@ export default function InsightsPage() {
                 key={goal.id}
                 goal={goal}
                 members={contacts.filter((c) => goal.memberIds.includes(c.id))}
-                generating={!goal.imageUrl}
+                generating={generatingImageIds.includes(goal.id)}
                 onClick={() => setOpenGoalId(goal.id)}
               />
             ))}

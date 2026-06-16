@@ -25,7 +25,7 @@ export default function NewGoalModal({ onClose, onCreate }: Props) {
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-stone-200 animate-modal-in">
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100">
           <h2 className="font-bold text-stone-900 text-lg">New goal</h2>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-colors">
             <X size={18} />
           </button>
         </div>

@@ -43,21 +43,23 @@ describe('goalsStore.addGoal', () => {
     await useGoalsStore.getState().addGoal('My Goal');
     expect(api.addGoal).toHaveBeenCalledWith({ title: 'My Goal' });
     expect(api.generateGoalImage).toHaveBeenCalledWith('a', 'a');
-    // Goal is present immediately; the image hasn't resolved yet.
+    // Goal is present immediately; the image hasn't resolved yet and it's marked generating.
     expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBeNull();
+    expect(useGoalsStore.getState().generatingImageIds).toContain('a');
 
-    // Image resolves in the background and patches in.
+    // Image resolves in the background and patches in; generating flag clears.
     resolveImg(g('a', [], 'http://img'));
     await vi.waitFor(() =>
       expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBe('http://img'),
     );
+    expect(useGoalsStore.getState().generatingImageIds).not.toContain('a');
   });
 
-  it('keeps the goal imageless when generation returns null', async () => {
+  it('clears the generating flag (no perpetual spinner) when generation returns null', async () => {
     (api.addGoal as ReturnType<typeof vi.fn>).mockResolvedValue(g('a'));
     (api.generateGoalImage as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     await useGoalsStore.getState().addGoal('My Goal');
-    await vi.waitFor(() => expect(api.generateGoalImage).toHaveBeenCalled());
+    await vi.waitFor(() => expect(useGoalsStore.getState().generatingImageIds).not.toContain('a'));
     expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBeNull();
   });
 
