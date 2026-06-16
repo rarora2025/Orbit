@@ -50,7 +50,7 @@ function greeting(date: Date): string {
 
 export default function InsightsPage() {
   const { user } = useUser();
-  const { contacts, loaded, saveDraft, markSent } = useCRMStore();
+  const { contacts, loaded, saveDraft, markSent, clearFollowUp } = useCRMStore();
   const { goals, loaded: goalsLoaded, generatingImageIds, addGoal } = useGoalsStore();
   const composer = useDraftComposer();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -82,8 +82,13 @@ export default function InsightsPage() {
   function markDone(move: NextMove) {
     markSent(move.contactId, { channel: 'manual', content: '' });
   }
+  // Dismiss = "stop nagging me about this." Clear the contact's next-action date
+  // so the move drops off for good (it's driven by nextFollowUpAt) and doesn't
+  // reappear on reload. Keep the local set for instant removal before the write
+  // round-trips.
   function dismiss(move: NextMove) {
     setDismissed((prev) => new Set(prev).add(move.id));
+    clearFollowUp(move.contactId);
   }
 
   return (
