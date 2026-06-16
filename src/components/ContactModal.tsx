@@ -10,6 +10,8 @@ interface Props {
   onClose: () => void;
   /** Present → edit mode (form is pre-filled and Save updates this contact). */
   contact?: Contact;
+  /** Add mode: seed the form (e.g. a name/company the chat proposed). */
+  prefill?: { name?: string; company?: string };
   /** Called in add mode with the freshly-built contact. */
   onAdd?: (contact: Contact) => void;
   /** Called in edit mode with the id and the changed fields. */
@@ -24,12 +26,12 @@ const avatarPalette = [
   'bg-amber-200 text-amber-900', 'bg-cyan-200 text-cyan-900', 'bg-violet-200 text-violet-900',
 ];
 
-export default function ContactModal({ onClose, contact, onAdd, onSave }: Props) {
+export default function ContactModal({ onClose, contact, prefill, onAdd, onSave }: Props) {
   const isEdit = !!contact;
   const [form, setForm] = useState({
-    name: contact?.name ?? '',
+    name: contact?.name ?? prefill?.name ?? '',
     role: contact?.role ?? '',
-    company: contact?.company ?? '',
+    company: contact?.company ?? prefill?.company ?? '',
     email: contact?.email ?? '',
     phone: contact?.phone ?? '',
     linkedinUrl: contact?.linkedinUrl ?? '',

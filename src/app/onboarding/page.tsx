@@ -39,12 +39,11 @@ const AMB = [
 
 /* ---------------- ORBIT VISUAL ---------------- */
 function OrbitVisual({
-  name, goals, contacts, step,
+  name, goals, contacts,
 }: {
   name: string;
   goals: GoalPick[];
   contacts: Person[];
-  step: number;
 }) {
   const R_INNER = 20, R_MID = 36, R_OUTER = 50;
   const goalNodes = goals.map((g, i) => {
@@ -119,21 +118,6 @@ function OrbitVisual({
           {name.trim() ? <span className="hub-init">{initials(name)}</span> : <OrbitLogo className="hub-logo" />}
         </div>
         <div className="you-pill">{name.trim() ? name.trim().split(/\s+/)[0] : 'You'}</div>
-      </div>
-
-      <div className="ov-cap">
-        <div className="big">
-          {contacts.length === 0 && goals.length === 0 && 'Your network, in orbit'}
-          {(contacts.length > 0 || goals.length > 0) && (
-            <span>{contacts.length} {contacts.length === 1 ? 'person' : 'people'}{goals.length ? ` · ${goals.length} ${goals.length === 1 ? 'goal' : 'goals'}` : ''}</span>
-          )}
-        </div>
-        <div className="small">
-          {step === 0 && 'Everything orbits around you.'}
-          {step === 1 && 'Goals shape who Orbit surfaces first.'}
-          {step === 2 && 'Watch your network take shape.'}
-          {step === 3 && 'All set — ask Orbit anything.'}
-        </div>
       </div>
     </div>
   );
@@ -416,8 +400,7 @@ function OnboardingFlow() {
     if (testMode) {
       // Preview only — persist nothing, just show the launch beat and land in chat.
       await delay(1400);
-      try { sessionStorage.setItem('orbit_onboarding_q', q); } catch { /* ignore */ }
-      router.replace('/chat');
+      router.replace(`/chat?q=${encodeURIComponent(q)}`);
       return;
     }
 
@@ -451,15 +434,14 @@ function OnboardingFlow() {
       console.error('Onboarding completion failed', e);
     }
 
-    try { sessionStorage.setItem('orbit_onboarding_q', q); } catch { /* ignore */ }
-    router.replace('/chat');
+    router.replace(`/chat?q=${encodeURIComponent(q)}`);
   }
 
   return (
     <div className="orbit-onboard">
       <div className="stage">
         <div className="visual">
-          <OrbitVisual name={name} goals={goals} contacts={contacts} step={step} />
+          <OrbitVisual name={name} goals={goals} contacts={contacts} />
         </div>
 
         <div className="panel">
