@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const order = vi.fn();
 const eq = vi.fn();
@@ -122,5 +122,47 @@ describe('addGoalMember / removeGoalMember', () => {
     seedGoal([]); // listGoals returns only g1
     const { addGoalMember } = await import('./goals.actions');
     await expect(addGoalMember('does-not-exist', 'c1')).rejects.toThrow(/not found/i);
+  });
+});
+
+describe('generateGoalImage', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; delete process.env.POLLINATIONS_API_KEY; });
+
+  function seedGoalForUpdate() {
+    // updateGoal({imageUrl}) returns the patched goal via .single()
+    single.mockResolvedValue({ data: { id: 'g1', user_id: 'user_123', title: 'T', image_url: 'http://media/x', member_ids: [], created_at: '', updated_at: '' }, error: null });
+  }
+
+  it('returns null and skips network when the key is missing', async () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    const { generateGoalImage } = await import('./goals.actions');
+    const result = await generateGoalImage('g1', 'T');
+    expect(result).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('generates, re-hosts, and persists the key-free url', async () => {
+    process.env.POLLINATIONS_API_KEY = 'sk_test';
+    seedGoalForUpdate();
+    globalThis.fetch = vi.fn()
+      // 1) image generation -> bytes
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['img'], { type: 'image/jpeg' }) })
+      // 2) media upload -> { url }
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: 'http://media/x' }) }) as unknown as typeof fetch;
+
+    const { generateGoalImage } = await import('./goals.actions');
+    const goal = await generateGoalImage('g1', 'T');
+    expect(goal?.imageUrl).toBe('http://media/x');
+    // Persisted via updateGoal -> goals table update with image_url
+    expect(update.mock.calls.some((c) => c[0].image_url === 'http://media/x')).toBe(true);
+  });
+
+  it('returns null without throwing when generation fails', async () => {
+    process.env.POLLINATIONS_API_KEY = 'sk_test';
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 500 }) as unknown as typeof fetch;
+    const { generateGoalImage } = await import('./goals.actions');
+    expect(await generateGoalImage('g1', 'T')).toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { supabaseAdmin } from './supabase';
-import { type Goal } from './goals';
+import { goalImagePrompt, type Goal } from './goals';
 
 interface Row {
   id: string;
@@ -113,4 +113,50 @@ export async function removeGoalMember(goalId: string, contactId: string): Promi
   const goal = await requireGoal(goalId);
   const next = goal.memberIds.filter((id) => id !== contactId);
   return setMembers(goalId, next);
+}
+
+/** Parse Pollinations media-upload responses defensively across shapes. */
+function parseUploadedUrl(body: unknown): string | null {
+  if (body && typeof body === 'object') {
+    const o = body as Record<string, unknown>;
+    if (typeof o.url === 'string') return o.url;
+    if (typeof o.hash === 'string') return `https://media.pollinations.ai/${o.hash}`;
+    if (typeof o.cid === 'string') return `https://media.pollinations.ai/${o.cid}`;
+  }
+  return null;
+}
+
+/**
+ * Generate an AI photo for a goal and persist a stable, key-free URL.
+ * Never throws: on any problem (missing key, non-2xx, parse failure) it logs and
+ * returns null, leaving the goal imageless so the UI shows its gradient fallback.
+ */
+export async function generateGoalImage(goalId: string, title: string): Promise<Goal | null> {
+  const key = process.env.POLLINATIONS_API_KEY;
+  if (!key) return null;
+  try {
+    const prompt = encodeURIComponent(goalImagePrompt(title));
+    const genRes = await fetch(
+      `https://gen.pollinations.ai/image/${prompt}?model=flux&width=768&height=512&nologo=true`,
+      { headers: { Authorization: `Bearer ${key}` } },
+    );
+    if (!genRes.ok) throw new Error(`image gen failed: ${genRes.status}`);
+    const blob = await genRes.blob();
+
+    const form = new FormData();
+    form.append('file', blob, 'goal.jpg');
+    const upRes = await fetch('https://media.pollinations.ai/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+    });
+    if (!upRes.ok) throw new Error(`media upload failed: ${upRes.status}`);
+    const url = parseUploadedUrl(await upRes.json());
+    if (!url) throw new Error('media upload returned no url');
+
+    return await updateGoal(goalId, { imageUrl: url });
+  } catch (err) {
+    console.error('generateGoalImage failed', err);
+    return null;
+  }
 }
