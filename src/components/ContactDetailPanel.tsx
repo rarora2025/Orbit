@@ -90,11 +90,25 @@ export default function ContactDetailPanel({
 
   return (
     <>
+    {/* Mobile-only dim backdrop — tapping it closes the slide-over. */}
     <div
-      className={`flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${open ? 'w-[384px]' : 'w-0'}`}
+      className={`md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      onClick={onClose}
+      aria-hidden
+    />
+    {/* Below md: a fixed slide-over drawer from the right (doesn't squeeze the
+        board). md and up: an in-flow column that animates its width to push the
+        board over, exactly as before. */}
+    <div
+      className={[
+        'fixed top-[4.75rem] right-0 bottom-0 z-50 w-full max-w-[420px] transition-transform duration-300 ease-out',
+        open ? 'translate-x-0' : 'translate-x-full',
+        'md:static md:z-auto md:max-w-none md:translate-x-0 md:flex-shrink-0 md:overflow-hidden md:transition-[width]',
+        open ? 'md:w-[384px]' : 'md:w-0',
+      ].join(' ')}
       aria-hidden={!open}
     >
-      <div className="w-[384px] h-full pl-3">
+      <div className="w-full md:w-[384px] h-full p-3 md:p-0 md:pl-3">
         <div className="h-full flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
           {c && cfg && (
             <>
