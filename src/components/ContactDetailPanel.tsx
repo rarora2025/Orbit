@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL } from '@/lib/mockData';
+import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import MessageViewModal from './MessageViewModal';
 import { formatDate } from '@/lib/utils';
@@ -219,9 +219,14 @@ export default function ContactDetailPanel({
                           const label = it.type === 'status_changed' && it.content
                             ? it.content
                             : INTERACTION_LABEL[it.type] ?? it.type;
+                          // Status-change nodes take the destination status's color (e.g. green
+                          // for "Moved to Response"); everything else keeps its fixed color.
+                          const nodeColor = it.type === 'status_changed'
+                            ? columnConfig[statusFromChange(it.content) ?? '']?.dot ?? 'bg-stone-400'
+                            : NODE_COLOR[it.type] ?? 'bg-stone-300';
                           return (
                             <li key={it.id} className="relative pl-5">
-                              <span className={`absolute left-[1px] top-[5px] w-2.5 h-2.5 rounded-full ring-2 ring-white ${NODE_COLOR[it.type] ?? 'bg-stone-300'}`} />
+                              <span className={`absolute left-[1px] top-[5px] w-2.5 h-2.5 rounded-full ring-2 ring-white ${nodeColor}`} />
                               <div className="flex items-baseline gap-2">
                                 <span className="text-[12.5px] font-semibold text-stone-700">{label}</span>
                                 <span className="text-[11px] text-stone-400 ml-auto flex-shrink-0">{formatDate(it.date)}</span>
