@@ -69,8 +69,9 @@ export const BOARD_STATUSES: Status[] = [
 ];
 
 /** The destination status named in a status_changed interaction's content, or
- *  null. Checks the longest status name first so "Met" can't shadow
- *  "Meeting Scheduled". Handles existing phrasings like "Moved to Response",
+ *  null. Statuses are checked longest-name-first as a forward-compatible guard:
+ *  should a future status name ever be a substring of a longer one, the longer
+ *  name still wins. Handles existing phrasings like "Moved to Response",
  *  "Marked as ghosted", and "Moved to long-term". */
 export function statusFromChange(content: string): Status | null {
   const text = content.toLowerCase();

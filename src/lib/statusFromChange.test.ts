@@ -11,10 +11,13 @@ describe('statusFromChange', () => {
   it('handles the long-term phrasing', () => {
     expect(statusFromChange('Moved to long-term')).toBe('Long-term');
   });
-  it('prefers the longer status name (Meeting Scheduled, not Met)', () => {
+  it('matches a multi-word status name', () => {
     expect(statusFromChange('Moved to Meeting Scheduled')).toBe('Meeting Scheduled');
   });
   it('returns null for unrelated text', () => {
     expect(statusFromChange('Logged a note')).toBeNull();
+  });
+  it('returns null for an empty string', () => {
+    expect(statusFromChange('')).toBeNull();
   });
 });
