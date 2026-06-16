@@ -4,6 +4,7 @@ import type { Status, Warmth } from '../mockData';
 // The client renders it as a confirm card; executeChatAction runs it on confirm.
 export type ProposedAction =
   | { id: string; type: 'create_contact'; args: { name: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth } }
+  | { id: string; type: 'update_contact'; args: { contactName: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth } }
   | { id: string; type: 'create_goal'; args: { title: string } }
   | { id: string; type: 'add_contact_to_goal'; args: { contactName: string; goalTitle: string } }
   | { id: string; type: 'set_status'; args: { contactName: string; status: Status } }
@@ -51,6 +52,26 @@ export const CHAT_TOOLS: ChatTool[] = [
           warmth: { type: 'string', enum: ['Low', 'Medium', 'High'], description: 'Relationship temperature' },
         },
         required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_contact',
+      description: 'Edit or enrich a person already in the network — add/fix their phone, email, LinkedIn, role, company, or temperature. Use this (not create_contact) for anyone who already exists; only pass the fields that change.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contactName: str('Existing person to edit'),
+          company: str('Company or organization'),
+          role: str('Job title'),
+          email: str('Email address'),
+          phone: str('Phone number'),
+          linkedinUrl: str('LinkedIn profile URL'),
+          warmth: { type: 'string', enum: ['Low', 'Medium', 'High'], description: 'Relationship temperature' },
+        },
+        required: ['contactName'],
       },
     },
   },
@@ -185,6 +206,14 @@ export function parseToolCall(name: string, argsJson: string): ProposedAction | 
       const warmth = s('warmth');
       return { id, type: 'create_contact', args: { name: nm, company: s('company'), role: s('role'), email: s('email'), phone: s('phone'), linkedinUrl: s('linkedinUrl'), warmth: (warmth as Warmth) } };
     }
+    case 'update_contact': {
+      const c = s('contactName');
+      if (!c) return null;
+      const warmth = s('warmth');
+      const fields = { company: s('company'), role: s('role'), email: s('email'), phone: s('phone'), linkedinUrl: s('linkedinUrl'), warmth: warmth as Warmth | undefined };
+      if (!Object.values(fields).some((v) => v !== undefined)) return null;
+      return { id, type: 'update_contact', args: { contactName: c, ...fields } };
+    }
     case 'create_goal': {
       const title = s('title');
       return title ? { id, type: 'create_goal', args: { title } } : null;
@@ -230,6 +259,16 @@ export function parseToolCall(name: string, argsJson: string): ProposedAction | 
 export function describeAction(a: ProposedAction): string {
   switch (a.type) {
     case 'create_contact': return `Add ${a.args.name}${a.args.company ? ` at ${a.args.company}` : ''}${a.args.role ? ` (${a.args.role})` : ''}`;
+    case 'update_contact': {
+      const f: string[] = [];
+      if (a.args.phone) f.push('phone');
+      if (a.args.email) f.push('email');
+      if (a.args.linkedinUrl) f.push('LinkedIn');
+      if (a.args.role) f.push('role');
+      if (a.args.company) f.push('company');
+      if (a.args.warmth) f.push('temperature');
+      return `Update ${a.args.contactName}${f.length ? ` · ${f.join(', ')}` : ''}`;
+    }
     case 'create_goal': return `Create goal “${a.args.title}”`;
     case 'add_contact_to_goal': return `Add ${a.args.contactName} to goal “${a.args.goalTitle}”`;
     case 'set_status': return `Move ${a.args.contactName} → ${a.args.status}`;

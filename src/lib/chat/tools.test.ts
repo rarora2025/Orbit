@@ -24,6 +24,13 @@ describe('parseToolCall', () => {
     expect(parseToolCall('set_follow_up', JSON.stringify({ contactName: 'X' }))).toBeNull();
   });
 
+  it('update_contact needs at least one field to change', () => {
+    expect(parseToolCall('update_contact', JSON.stringify({ contactName: 'Harry' }))).toBeNull();
+    const a = parseToolCall('update_contact', JSON.stringify({ contactName: 'Harry', linkedinUrl: 'https://linkedin.com/in/harry' }));
+    expect(a).toMatchObject({ type: 'update_contact', args: { contactName: 'Harry', linkedinUrl: 'https://linkedin.com/in/harry' } });
+    expect(describeAction(a!)).toBe('Update Harry · LinkedIn');
+  });
+
   it('validates enum status', () => {
     expect(parseToolCall('set_status', JSON.stringify({ contactName: 'X', status: 'Bogus' }))).toBeNull();
     expect(parseToolCall('set_status', JSON.stringify({ contactName: 'X', status: 'Met' }))).toMatchObject({ type: 'set_status', args: { status: 'Met' } });

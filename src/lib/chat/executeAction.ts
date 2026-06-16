@@ -4,7 +4,7 @@ import type { Contact, Status, Warmth } from '../mockData';
 import type { ProposedAction } from './tools';
 import { resolveContact } from './resolveContact';
 import {
-  listContacts, addContact, changeStatusLogged, markMet, logResponse,
+  listContacts, addContact, updateContact, changeStatusLogged, markMet, logResponse,
   markMessageSent, setFollowUp, scheduleMeeting,
 } from '../contacts.actions';
 import { listGoals, addGoal, addGoalMember, generateGoalImage } from '../goals.actions';
@@ -86,6 +86,20 @@ export async function executeChatAction(action: ProposedAction): Promise<ActionR
     const c = r.contact;
 
     switch (action.type) {
+      case 'update_contact': {
+        const patch: Partial<Contact> = {};
+        if (action.args.company !== undefined) patch.company = action.args.company;
+        if (action.args.role !== undefined) patch.role = action.args.role;
+        if (action.args.email !== undefined) patch.email = action.args.email;
+        if (action.args.phone !== undefined) patch.phone = action.args.phone;
+        if (action.args.linkedinUrl !== undefined) patch.linkedinUrl = action.args.linkedinUrl;
+        if (action.args.warmth !== undefined) {
+          patch.warmth = action.args.warmth;
+          patch.score = action.args.warmth === 'High' ? 85 : action.args.warmth === 'Low' ? 45 : 62;
+        }
+        await updateContact(c.id, patch);
+        return { ok: true, receipt: `Updated ${c.name}` };
+      }
       case 'set_status':
         await changeStatusLogged(c.id, action.args.status, `Moved to ${action.args.status}`);
         return { ok: true, receipt: `${c.name} → ${action.args.status}` };
