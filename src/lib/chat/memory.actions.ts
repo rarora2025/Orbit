@@ -51,9 +51,10 @@ export async function updateProfileMemory(exchange: { user: string; assistant: s
           role: 'system',
           content:
             'You maintain a concise running profile of a user of a personal CRM, used to personalize an assistant. ' +
-            'Given the existing profile and a new exchange, return an UPDATED profile capturing durable facts only: ' +
-            'their role/identity, what they are working toward (goals), preferences (tone, channels), and stable context. ' +
-            'Omit transient chatter. Keep it under 1200 characters, plain text, no preamble — return only the profile.',
+            'Given the existing profile and a new exchange, return an UPDATED profile capturing DURABLE traits only: ' +
+            'their role/identity, the kinds of relationships and outcomes they care about, and preferences (tone, channels, working style). ' +
+            'Do NOT store specific people, companies, goals, or projects by name — those live in the live network data, which changes as the user adds and deletes things; recording them here makes the profile go stale and reference things that no longer exist. ' +
+            'Capture the general shape of what they want, not a roster. Omit transient chatter. Keep it under 1200 characters, plain text, no preamble — return only the profile.',
         },
         {
           role: 'user',

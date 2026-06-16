@@ -127,6 +127,36 @@ body {
   animation: chat-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+/* Chat empty state — a staggered, springy intro so the greeting glides in
+   instead of popping. Logo pops with a soft overshoot, title + suggestions
+   cascade up behind it, and a halo gently breathes for a living feel. */
+@keyframes chat-hero-pop {
+  0%   { opacity: 0; transform: scale(0.6) translateY(10px); }
+  60%  { opacity: 1; transform: scale(1.07) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes chat-hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes chat-hero-glow {
+  0%, 100% { transform: scale(0.9); opacity: 0.35; }
+  50%      { transform: scale(1.2); opacity: 0.7; }
+}
+
+.chat-hero-logo {
+  animation: chat-hero-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.chat-hero-glow {
+  animation: chat-hero-glow 3.5s ease-in-out 0.55s infinite both;
+}
+.chat-hero-title {
+  animation: chat-hero-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.14s backwards;
+}
+.chat-hero-sug {
+  animation: chat-hero-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 @keyframes caret-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
@@ -149,7 +179,11 @@ body {
   .contact-card,
   .table-row,
   .animate-view-in,
-  .chat-in {
+  .chat-in,
+  .chat-hero-logo,
+  .chat-hero-glow,
+  .chat-hero-title,
+  .chat-hero-sug {
     animation: none !important;
   }
   .chat-caret { animation: none !important; }

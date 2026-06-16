@@ -21,6 +21,7 @@ export function buildSystemPrompt({ snapshot, memory, userName, today }: PromptI
     '',
     'How you work:',
     '- Reason over the user\'s real network below. Be specific and reference real people by name.',
+    '- The network snapshot below is the SINGLE SOURCE OF TRUTH for who and what currently exists. Only reference people and goals that appear in it. If a goal, project, or person was deleted it will be absent from the snapshot — treat it as gone and never bring it up again, even if your profile memory or an earlier message mentions it. When the snapshot and your memory disagree, the snapshot wins.',
     '- You can take actions by calling tools, but you NEVER change data on your own. Each tool call is a PROPOSAL the user must confirm in the UI. When you call a tool, also write one short line of text — never reply with an empty message.',
     '- Only use create_contact for people who are NOT already in the network. Pass every detail the user gave (company, role, email, phone, etc.). To add or fix details on someone who already exists (a phone, LinkedIn, role, company), use update_contact — never create a duplicate. Never invent people, companies, or facts.',
     '- For actions on an existing person, pass their name as written below; the app resolves it.',
@@ -28,7 +29,7 @@ export function buildSystemPrompt({ snapshot, memory, userName, today }: PromptI
     '- Coach: when a request is vague or you can sharpen their thinking, ask one crisp question or suggest a concrete next move instead of guessing.',
     '- Write like a sharp human texting. You may use light Markdown — **bold** for names/emphasis and "- " bullet lists when listing people — but keep it tight. Never use placeholder brackets.',
     '',
-    memory ? `What you know about ${userName || 'the user'} (profile memory):\n${memory}\n` : 'You have no saved profile for this user yet — learn as you go.\n',
+    memory ? `What you know about ${userName || 'the user'} (durable preferences and context only — the live network snapshot below is authoritative for which people and goals currently exist):\n${memory}\n` : 'You have no saved profile for this user yet — learn as you go.\n',
     'Their network right now:',
     snapshot,
   ].join('\n');

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
 import { useChatStore, type StoredAction, type StoredMsg } from '@/lib/chatStore';
 import { useGoalsStore } from '@/lib/goalsStore';
@@ -94,6 +95,8 @@ export default function ChatPage() {
 function ChatInner() {
   const router = useRouter();
   const handoffQ = useSearchParams().get('q');
+  const { user } = useUser();
+  const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? 'there';
   const setContacts = useCRMStore(s => s.setContacts);
   const { saveDraft, markSent } = useCRMStore();
   const setGoals = useGoalsStore(s => s.setGoals);
@@ -249,16 +252,20 @@ function ChatInner() {
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
           {empty ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
-              <div className="w-11 h-11 rounded-2xl bg-stone-100 flex items-center justify-center mb-4">
-                <OrbitLogo size={24} />
+              <div className="relative mb-4 chat-hero-logo">
+                <div className="absolute inset-0 -z-10 rounded-full bg-orange-400/40 blur-2xl chat-hero-glow" aria-hidden />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-50 to-stone-100 ring-1 ring-stone-200/70 shadow-sm flex items-center justify-center">
+                  <OrbitLogo size={26} />
+                </div>
               </div>
-              <h2 className="text-[15px] font-semibold text-stone-800 mb-5">Ask anything, or just tell me what happened</h2>
+              <h2 className="text-[15px] font-semibold text-stone-800 mb-5 chat-hero-title">Jump in, {firstName}</h2>
               <div className="flex flex-col gap-1.5 w-full">
-                {SUGGESTIONS.map(s => (
+                {SUGGESTIONS.map((s, i) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-left text-[13px] text-stone-600 bg-stone-50 hover:bg-white hover:border-stone-300 border border-stone-200 rounded-lg px-3.5 py-2.5 transition-colors"
+                    style={{ animationDelay: `${0.22 + i * 0.07}s` }}
+                    className="chat-hero-sug text-left text-[13px] text-stone-600 bg-stone-50 hover:bg-white hover:border-stone-300 hover:-translate-y-0.5 hover:shadow-sm border border-stone-200 rounded-lg px-3.5 py-2.5 transition-all duration-200"
                   >
                     {s}
                   </button>

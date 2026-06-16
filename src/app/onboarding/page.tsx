@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import OrbitLogo from '@/components/OrbitLogo';
 import { completeOnboarding, type OnboardingContactInput } from '@/lib/onboarding.actions';
@@ -59,6 +59,25 @@ const AMB = [
   { left: 36, top: 50, size: 6, fd: 13, delay: -0.9 },
 ];
 
+/* A single orbiting node: shows the contact's company logo, falling back to a
+ * colored initials orb when there's no company or the logo fails to load. */
+function Orb({ person }: { person: Person }) {
+  const [failed, setFailed] = useState(false);
+  const showLogo = person.logo && !failed;
+  if (showLogo) {
+    return (
+      <div className="orb orb-logo">
+        <img src={person.logo!} alt="" onError={() => setFailed(true)} />
+      </div>
+    );
+  }
+  return (
+    <div className="orb" style={{ background: `linear-gradient(150deg, ${person.color}cc, ${person.color})` }}>
+      {initials(person.name)}
+    </div>
+  );
+}
+
 /* ---------------- ORBIT VISUAL ---------------- */
 function OrbitVisual({ name, contacts }: { name: string; contacts: Person[] }) {
   const R_MID = 36, R_OUTER = 50;
@@ -88,10 +107,7 @@ function OrbitVisual({ name, contacts }: { name: string; contacts: Person[] }) {
           {mid.map((c) => (
             <div className="node" key={c.name} style={{ left: c.x + '%', top: c.y + '%' }}>
               <div className="upright pop">
-                <div className="orb" style={{ background: `linear-gradient(150deg, ${c.color}cc, ${c.color})` }}>
-                  {initials(c.name)}
-                  {c.logo && <span className="badge"><img src={c.logo} alt="" /></span>}
-                </div>
+                <Orb person={c} />
               </div>
             </div>
           ))}
@@ -102,10 +118,7 @@ function OrbitVisual({ name, contacts }: { name: string; contacts: Person[] }) {
           {outer.map((c) => (
             <div className="node" key={c.name} style={{ left: c.x + '%', top: c.y + '%' }}>
               <div className="upright pop">
-                <div className="orb" style={{ background: `linear-gradient(150deg, ${c.color}cc, ${c.color})` }}>
-                  {initials(c.name)}
-                  {c.logo && <span className="badge"><img src={c.logo} alt="" /></span>}
-                </div>
+                <Orb person={c} />
               </div>
             </div>
           ))}
@@ -277,7 +290,7 @@ function StepContacts({ contacts, addPeople, addManual }: { contacts: Person[]; 
         <div className="imported">
           <div className="imp-head">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-            <span className="num">{contacts.length}</span> added to your orbit
+            <span><span className="num">{contacts.length}</span> added to your orbit</span>
           </div>
           {contacts.slice(-3).reverse().map((c, i) => (
             <div className="imp-row" key={c.name} style={{ animationDelay: i * 0.05 + 's' }}>
@@ -305,9 +318,6 @@ export default function OnboardingPage() {
 
 function OnboardingFlow() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Test mode (?test=1): walk the flow without persisting anything.
-  const testMode = searchParams.get('test') === '1';
   const { user, isLoaded } = useUser();
 
   const [step, setStep] = useState(0);
@@ -318,11 +328,13 @@ function OnboardingFlow() {
   const [phase, setPhase] = useState<'onboard' | 'launch'>('onboard');
   const [prefilled, setPrefilled] = useState(false);
 
+  // Onboarding is a one-time flow: anyone already flagged onboarded is bounced
+  // straight to the app. New accounts arrive here via the post-sign-up redirect.
   const alreadyOnboarded = isLoaded && user?.unsafeMetadata?.onboarded === true;
 
   useEffect(() => {
-    if (alreadyOnboarded && !testMode) router.replace('/');
-  }, [alreadyOnboarded, testMode, router]);
+    if (alreadyOnboarded) router.replace('/');
+  }, [alreadyOnboarded, router]);
 
   if (isLoaded && user && !prefilled) {
     setPrefilled(true);
@@ -337,7 +349,6 @@ function OnboardingFlow() {
     if (!t || goals.some((g) => g.label.toLowerCase() === t.toLowerCase())) return;
     const cl = ORB_COLORS[goals.length % ORB_COLORS.length];
     setGoals((gs) => [...gs, { label: t, cl }]);
-    if (testMode) return;
     try {
       const goal = await createGoal({ title: t });
       setGoals((gs) => gs.map((g) => (g.label === t ? { ...g, id: goal.id } : g)));
@@ -349,7 +360,7 @@ function OnboardingFlow() {
   const removeGoalLive = (label: string) => {
     const target = goals.find((g) => g.label === label);
     setGoals((gs) => gs.filter((g) => g.label !== label));
-    if (!testMode && target?.id) void removeGoalApi(target.id).catch(console.error);
+    if (target?.id) void removeGoalApi(target.id).catch(console.error);
   };
 
   const personFrom = (row: ImportRow, idx: number): Person => ({
@@ -377,29 +388,25 @@ function OnboardingFlow() {
   async function finish() {
     setPhase('launch');
 
-    if (!testMode) {
-      const payloadContacts: OnboardingContactInput[] = contacts.map((c) => ({
-        name: c.name,
-        company: c.company === '—' ? '' : c.company,
-        email: c.email,
-        phone: c.phone,
-      }));
-      try {
-        await Promise.all([completeOnboarding({ contacts: payloadContacts }), delay(1500)]);
-        if (user) {
-          const trimmed = name.trim();
-          const profileChanged = trimmed && trimmed !== (user.fullName ?? '');
-          const [firstName, ...rest] = trimmed.split(/\s+/);
-          await user.update({
-            ...(profileChanged ? { firstName, lastName: rest.join(' ') } : {}),
-            unsafeMetadata: { ...user.unsafeMetadata, onboarded: true },
-          });
-        }
-      } catch (e) {
-        console.error('Onboarding completion failed', e);
+    const payloadContacts: OnboardingContactInput[] = contacts.map((c) => ({
+      name: c.name,
+      company: c.company === '—' ? '' : c.company,
+      email: c.email,
+      phone: c.phone,
+    }));
+    try {
+      await Promise.all([completeOnboarding({ contacts: payloadContacts }), delay(1500)]);
+      if (user) {
+        const trimmed = name.trim();
+        const profileChanged = trimmed && trimmed !== (user.fullName ?? '');
+        const [firstName, ...rest] = trimmed.split(/\s+/);
+        await user.update({
+          ...(profileChanged ? { firstName, lastName: rest.join(' ') } : {}),
+          unsafeMetadata: { ...user.unsafeMetadata, onboarded: true },
+        });
       }
-    } else {
-      await delay(1500);
+    } catch (e) {
+      console.error('Onboarding completion failed', e);
     }
 
     router.replace('/');
@@ -415,7 +422,6 @@ function OnboardingFlow() {
         <div className="panel">
           <div className="phead">
             <span className="brand"><OrbitLogo size={26} className="logo" /> Orbit</span>
-            {testMode && <span className="test-badge">Test mode · nothing saved</span>}
             <span className="spacer" />
             {step === 1 && <button className="skip" onClick={next}>Skip for now</button>}
             {step === 2 && contacts.length === 0 && <button className="skip" onClick={() => finish()}>I&apos;ll do this later</button>}

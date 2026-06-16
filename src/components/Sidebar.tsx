@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, MessageCircle, Compass, Sparkles } from 'lucide-react';
+import { LayoutGrid, MessageCircle, Compass } from 'lucide-react';
 import { UserButton, useUser } from '@clerk/nextjs';
 import OrbitLogo from './OrbitLogo';
 
@@ -47,15 +47,6 @@ export default function Sidebar() {
 
       {/* Profile */}
       <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-        {/* TEMP test affordance: replay the onboarding flow without saving. */}
-        <Link
-          href="/onboarding?test=1"
-          title="Replay onboarding (test — nothing is saved)"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium text-stone-500 hover:text-orange-600 hover:bg-orange-50/70 transition-all duration-150"
-        >
-          <Sparkles size={13} className="flex-shrink-0" />
-          <span className="hidden md:inline whitespace-nowrap">Test onboarding</span>
-        </Link>
         <UserName />
         <UserButton
           appearance={{ elements: { rootBox: 'w-7 h-7', avatarBox: 'w-7 h-7' } }}

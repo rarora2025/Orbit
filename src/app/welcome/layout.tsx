@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Orbit — Your private AI relationship agent for your career',
+  title: 'Orbit',
   description:
     'Orbit helps you organize the people, projects, and opportunities shaping your career.',
 };
