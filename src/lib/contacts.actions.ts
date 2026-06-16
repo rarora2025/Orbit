@@ -15,14 +15,16 @@ interface Row {
 
 function rowToContact(r: Row): Contact {
   // The full contact lives in `data`; id/position are authoritative columns.
-  // Back-compat: older rows stored `relationshipGoal`/`inquiry`/`priority`.
-  const { relationshipGoal, inquiry, priority, ...rest } = r.data as Contact & {
+  // `goal` is intentionally NOT read from the blob — it is derived from goal
+  // membership in listContacts (the single source of truth). Older rows stored
+  // `relationshipGoal`/`inquiry`/`priority`; all are discarded on next write.
+  const { relationshipGoal, inquiry, priority, goal, ...rest } = r.data as Contact & {
     relationshipGoal?: string;
     inquiry?: string;
     priority?: string;
   };
-  void inquiry; void priority; // intentionally dropped
-  return { ...rest, goal: rest.goal ?? relationshipGoal, id: r.id, position: r.position };
+  void inquiry; void priority; void relationshipGoal; void goal;
+  return { ...rest, id: r.id, position: r.position };
 }
 
 async function requireUserId(): Promise<string> {
@@ -40,10 +42,25 @@ export async function listContacts(): Promise<Contact[]> {
     .order('position', { ascending: true });
   if (error) throw error;
   const byContact = await listUserInteractions();
+
+  // Goal membership is the single source of truth for a contact's goal text.
+  const { data: goalRows } = await supabaseAdmin
+    .from('goals')
+    .select('title, member_ids')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  const titlesByContact = new Map<string, string[]>();
+  for (const row of (goalRows ?? []) as { title: string; member_ids: string[] }[]) {
+    for (const cid of Array.isArray(row.member_ids) ? row.member_ids : []) {
+      titlesByContact.set(cid, [...(titlesByContact.get(cid) ?? []), row.title]);
+    }
+  }
+
   return (data as Row[]).map((r) => {
     const contact = rowToContact(r);
-    // The interactions table is the source of truth; show newest first.
     contact.interactions = [...(byContact.get(r.id) ?? [])].reverse();
+    const titles = titlesByContact.get(r.id);
+    contact.goal = titles && titles.length > 0 ? titles.join(', ') : undefined;
     return contact;
   });
 }

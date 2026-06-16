@@ -73,6 +73,34 @@ describe('listContacts interactions join', () => {
   });
 });
 
+describe('listContacts goal derivation from membership', () => {
+  it('sets contact.goal to the joined titles of goals the contact belongs to', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    // 1) contacts read, 2) interactions read, 3) goals read — in call order.
+    order
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', goal: 'STALE', interactions: [] } },
+          { id: 'c2', position: 2000, data: { id: 'c2', status: 'Send', goal: 'ALSO STALE', interactions: [] } },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: [], error: null }) // interactions
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'g1', title: 'Recruiting', image_url: null, member_ids: ['c1'], created_at: '', updated_at: '' },
+          { id: 'g2', title: 'Fundraising', image_url: null, member_ids: ['c1'], created_at: '', updated_at: '' },
+        ],
+        error: null,
+      });
+
+    const { listContacts } = await import('./contacts.actions');
+    const contacts = await listContacts();
+    expect(contacts.find((c) => c.id === 'c1')?.goal).toBe('Recruiting, Fundraising');
+    expect(contacts.find((c) => c.id === 'c2')?.goal).toBeUndefined(); // cleared despite stale blob value
+  });
+});
+
 describe('lastContacted "last activity" stamping', () => {
   // Seed one existing contact for the read, then an empty interactions read.
   function seedContact(lastContacted: string) {
