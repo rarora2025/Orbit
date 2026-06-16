@@ -72,3 +72,48 @@ describe('listContacts interactions join', () => {
     expect(c1.interactions.some((i) => i.id === 'stale')).toBe(false); // blob copy ignored
   });
 });
+
+describe('lastContacted "last activity" stamping', () => {
+  // Seed one existing contact for the read, then an empty interactions read.
+  function seedContact(lastContacted: string) {
+    order
+      .mockResolvedValueOnce({
+        data: [{ id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', lastContacted, interactions: [] } }],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: [], error: null });
+  }
+
+  // A chainable .update(...).eq().eq().select().single() that captures its payload.
+  function captureUpdate(returnPosition: number) {
+    return vi.fn().mockReturnValue({
+      eq: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: { id: 'c1', position: returnPosition, data: {} }, error: null }) }) }) }),
+    });
+  }
+
+  it('updateContact preserves the prior lastContacted (edits are not activity)', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    seedContact('2020-01-01');
+    const update = captureUpdate(1000);
+    from.mockReturnValue({ select, insert, delete: del, update });
+
+    const { updateContact } = await import('./contacts.actions');
+    await updateContact('c1', { name: 'New Name' });
+
+    expect(update.mock.calls[0][0].data.lastContacted).toBe('2020-01-01');
+  });
+
+  it('moveContact bumps lastContacted to now', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    seedContact('2020-01-01');
+    const update = captureUpdate(2000);
+    from.mockReturnValue({ select, insert, delete: del, update });
+
+    const { moveContact } = await import('./contacts.actions');
+    const before = Date.now();
+    await moveContact('c1', 'Pending', null);
+
+    const stored = update.mock.calls[0][0].data.lastContacted;
+    expect(new Date(stored).getTime()).toBeGreaterThanOrEqual(before);
+  });
+});

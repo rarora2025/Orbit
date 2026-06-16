@@ -70,7 +70,7 @@ export async function updateContact(id: string, updates: Partial<Contact>): Prom
   const merged: Contact = { ...current, ...updates, id, position: current.position };
   // Strip interactions from the blob (table is the source of truth) but keep
   // them on the returned contact so the store's timeline stays populated.
-  return persist(userId, id, merged);
+  return persist(userId, id, merged, { touchActivity: false });
 }
 
 export async function moveContact(id: string, toStatus: Status, beforeId: string | null): Promise<Contact> {
@@ -91,7 +91,7 @@ export async function moveContact(id: string, toStatus: Status, beforeId: string
     interactions = [...current.interactions, logged];
   }
 
-  const merged: Contact = { ...current, status: toStatus, position, interactions };
+  const merged: Contact = { ...current, status: toStatus, position, interactions, lastContacted: new Date().toISOString() };
   const { data, error } = await supabaseAdmin
     .from('contacts')
     // Strip interactions from the blob; the table is the source of truth.
@@ -130,9 +130,18 @@ async function requireContact(contactId: string): Promise<{ userId: string; curr
   return { userId, current };
 }
 
-/** Persist a contact's `data` blob (interactions are stored in their own table). */
-async function persist(userId: string, contactId: string, merged: Contact): Promise<Contact> {
-  const dataToStore: Contact = { ...merged, interactions: [] };
+/** Persist a contact's `data` blob (interactions are stored in their own table).
+ *  Every lifecycle write is "activity" and bumps `lastContacted`; only plain
+ *  detail edits opt out via `{ touchActivity: false }`. */
+async function persist(
+  userId: string,
+  contactId: string,
+  merged: Contact,
+  opts: { touchActivity?: boolean } = {},
+): Promise<Contact> {
+  const stamped: Contact =
+    opts.touchActivity === false ? merged : { ...merged, lastContacted: new Date().toISOString() };
+  const dataToStore: Contact = { ...stamped, interactions: [] };
   const { data, error } = await supabaseAdmin
     .from('contacts')
     .update({ data: dataToStore, updated_at: new Date().toISOString() })
@@ -141,8 +150,8 @@ async function persist(userId: string, contactId: string, merged: Contact): Prom
     .select('id, position, data')
     .single();
   if (error) throw error;
-  // Return the caller's `merged` (with its real interactions), not the stripped blob.
-  return { ...merged, id: contactId, position: (data as Row).position };
+  // Return the caller's `stamped` (with its real interactions), not the stripped blob.
+  return { ...stamped, id: contactId, position: (data as Row).position };
 }
 
 export interface ResponseInput {
