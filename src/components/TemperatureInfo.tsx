@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import { Info, Star } from 'lucide-react';
 
-const PANEL_W = 256; // matches w-64
+const PANEL_W = 332; // wide enough for each definition on one line
 const MARGIN = 8;
 
 /** Small "(i)" button that pops a short definition of what Temperature means.
@@ -81,11 +81,11 @@ export default function TemperatureInfo() {
             <span className="text-[13px] font-semibold text-stone-800 tracking-normal">Temperature</span>
           </div>
           <ul className="space-y-2 text-[12px] leading-relaxed text-stone-600 tracking-normal font-normal">
-            <li className="flex gap-1.5">
+            <li className="flex gap-1.5 whitespace-nowrap">
               <span className="text-orange-400 font-bold">A.</span>
               <span><span className="font-semibold text-stone-700">Signal</span> — how high-value the person is.</span>
             </li>
-            <li className="flex gap-1.5">
+            <li className="flex gap-1.5 whitespace-nowrap">
               <span className="text-orange-400 font-bold">B.</span>
               <span><span className="font-semibold text-stone-700">Likelihood</span> — how likely they are to deliver.</span>
             </li>
