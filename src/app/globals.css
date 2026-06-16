@@ -117,12 +117,40 @@ body {
   animation: view-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Chat — message + action-card entrance, and the streaming caret. */
+@keyframes chat-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-in {
+  animation: chat-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.chat-caret {
+  display: inline-block;
+  width: 6px;
+  height: 1.05em;
+  margin-left: 2px;
+  transform: translateY(2px);
+  border-radius: 2px;
+  background: currentColor;
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-modal-in,
   .animate-backdrop-in,
   .contact-card,
   .table-row,
-  .animate-view-in {
+  .animate-view-in,
+  .chat-in {
     animation: none !important;
   }
+  .chat-caret { animation: none !important; }
 }
