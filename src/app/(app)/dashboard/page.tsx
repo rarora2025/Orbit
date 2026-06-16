@@ -129,6 +129,7 @@ export default function PipelinePage() {
               selectedId={selectedContactId}
               onSelect={(id) => selectContact(selectedContactId === id ? null : id)}
               onChangeStatus={(id, s) => setStatus(id, s)}
+              onDelete={deleteContact}
             />
           </div>
         )}

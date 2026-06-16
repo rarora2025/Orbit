@@ -1,0 +1,302 @@
+/* Orbit onboarding — ported from the standalone prototype, fully scoped under
+   `.orbit-onboard` so nothing leaks into the authenticated app. Font literals
+   are swapped for the next/font CSS variables set on the layout wrapper, and
+   keyframes are `ob-` prefixed to avoid colliding with Tailwind / the landing. */
+
+.orbit-onboard {
+  --paper:     oklch(0.965 0.008 78);
+  --paper-2:   oklch(0.945 0.009 78);
+  --panel:     oklch(0.992 0.004 80);
+  --card:      oklch(1 0 0);
+  --text:      oklch(0.24 0.02 62);
+  --dim:       oklch(0.455 0.016 62);
+  --faint:     oklch(0.6 0.012 62);
+  --border:    oklch(0.9 0.01 72);
+  --border-hi: oklch(0.84 0.012 72);
+  --accent:    oklch(0.66 0.19 45);
+  --accent-d:  oklch(0.6 0.2 42);
+  --accent-soft: oklch(0.93 0.07 55);
+  --accent-text: oklch(0.5 0.18 42);
+  --ring-track:  oklch(0.91 0.01 72);
+  --shadow-sm: 0 1px 3px rgba(40,30,20,.06);
+  --shadow:    0 1px 2px rgba(40,30,20,.05), 0 10px 28px rgba(40,30,20,.07);
+  --shadow-lg: 0 4px 14px rgba(40,30,20,.06), 0 30px 70px rgba(40,30,20,.11);
+  --spring: cubic-bezier(.34,1.56,.64,1);
+  --ease: cubic-bezier(.2,.7,.2,1);
+
+  position: fixed; inset: 0; height: 100dvh; overflow: hidden;
+  background: var(--paper); color: var(--text);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  line-height: 1.5;
+}
+.orbit-onboard * { box-sizing: border-box; }
+.orbit-onboard ::selection { background: var(--accent-soft); }
+.orbit-onboard button { font-family: inherit; cursor: pointer; }
+.orbit-onboard input { font-family: inherit; }
+
+/* ---------------- layout ---------------- */
+.orbit-onboard .stage { display: flex; height: 100%; }
+.orbit-onboard .visual {
+  flex: 1.05; min-width: 0; position: relative; overflow: hidden;
+  background:
+    radial-gradient(130% 90% at 18% 12%, oklch(0.97 0.03 60 / .9), transparent 55%),
+    radial-gradient(120% 90% at 95% 100%, oklch(0.95 0.045 320 / .5), transparent 55%),
+    var(--paper-2);
+  border-right: 1px solid var(--border);
+}
+.orbit-onboard .panel {
+  width: min(560px, 46vw); flex: none; position: relative;
+  display: flex; flex-direction: column; background: var(--paper);
+}
+@media (max-width: 940px) {
+  .orbit-onboard .visual { display: none; }
+  .orbit-onboard .panel { width: 100%; }
+}
+
+/* ---------------- panel chrome ---------------- */
+.orbit-onboard .phead { display: flex; align-items: center; gap: 11px; padding: 26px 40px 0; }
+.orbit-onboard .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+.orbit-onboard .brand .logo { width: 26px; height: 26px; }
+.orbit-onboard .phead .spacer { flex: 1; }
+.orbit-onboard .skip { font-size: 13.5px; font-weight: 600; color: var(--faint); padding: 7px 12px; border-radius: 9px; border: none; background: transparent; transition: color .15s, background .15s; }
+.orbit-onboard .skip:hover { color: var(--text); background: var(--paper-2); }
+
+/* stepper */
+.orbit-onboard .stepper { display: flex; gap: 7px; padding: 22px 40px 0; }
+.orbit-onboard .seg { height: 4px; flex: 1; border-radius: 3px; background: var(--border); overflow: hidden; position: relative; }
+.orbit-onboard .seg i { position: absolute; inset: 0; background: var(--accent); border-radius: 3px; transform-origin: left; transform: scaleX(0); transition: transform .5s var(--ease); }
+.orbit-onboard .seg.done i { transform: scaleX(1); }
+.orbit-onboard .seg.active i { transform: scaleX(1); animation: ob-seg-pulse 2.4s ease-in-out infinite; }
+@keyframes ob-seg-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* content body */
+.orbit-onboard .pbody { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 24px 40px; overflow-y: auto; }
+.orbit-onboard .step-key { display: contents; }
+.orbit-onboard .eyebrow { font-family: var(--font-plex-mono), monospace; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 12px; }
+.orbit-onboard h1.q { font-size: clamp(22px, 2.5vw, 27px); line-height: 1.1; letter-spacing: -.03em; font-weight: 750; margin: 0; }
+.orbit-onboard .sub { font-size: 14px; color: var(--dim); line-height: 1.55; margin: 11px 0 0; max-width: 44ch; }
+
+/* enter animation per step */
+.orbit-onboard .anim-in > * { opacity: 0; transform: translateY(14px); animation: ob-rise .55s var(--ease) forwards; }
+.orbit-onboard .anim-in > *:nth-child(1) { animation-delay: .02s; }
+.orbit-onboard .anim-in > *:nth-child(2) { animation-delay: .08s; }
+.orbit-onboard .anim-in > *:nth-child(3) { animation-delay: .15s; }
+.orbit-onboard .anim-in > *:nth-child(4) { animation-delay: .22s; }
+.orbit-onboard .anim-in > *:nth-child(5) { animation-delay: .29s; }
+@keyframes ob-rise { to { opacity: 1; transform: none; } }
+
+/* ---------------- fields ---------------- */
+.orbit-onboard .fields { display: flex; flex-direction: column; gap: 14px; margin-top: 30px; }
+.orbit-onboard .field label { display: block; font-size: 12px; font-weight: 600; color: var(--dim); margin: 0 0 6px 2px; letter-spacing: .01em; }
+.orbit-onboard .field .inp-wrap { position: relative; display: flex; align-items: center; }
+.orbit-onboard .field .inp-wrap > svg { position: absolute; left: 15px; width: 18px; height: 18px; color: var(--faint); pointer-events: none; transition: color .18s; }
+.orbit-onboard .inp {
+  width: 100%; height: 48px; border-radius: 13px; border: 1.5px solid var(--border);
+  background: var(--card); padding: 0 16px 0 42px; font-size: 14px; font-weight: 500; color: var(--text);
+  outline: none; transition: border-color .18s, box-shadow .18s, background .18s;
+}
+.orbit-onboard .inp::placeholder { color: var(--faint); font-weight: 450; }
+.orbit-onboard .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--card); }
+.orbit-onboard .inp:disabled { background: var(--paper-2); color: var(--dim); cursor: default; }
+.orbit-onboard .field .inp-wrap:focus-within > svg { color: var(--accent); }
+.orbit-onboard .field .hint { font-size: 11.5px; color: var(--faint); margin: 6px 0 0 2px; }
+
+/* ---------------- chips (goals) ---------------- */
+.orbit-onboard .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.orbit-onboard .chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 12px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--card); color: var(--text);
+  font-size: 13.5px; font-weight: 600; transition: transform .18s var(--spring), border-color .18s, background .18s, box-shadow .18s;
+}
+.orbit-onboard .chip:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+.orbit-onboard .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cl, var(--accent)); transition: transform .2s var(--spring); flex: none; }
+.orbit-onboard .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); box-shadow: 0 4px 14px oklch(0.7 0.18 45 / .16); }
+.orbit-onboard .chip.on .dot { transform: scale(1.25); }
+.orbit-onboard .chip .chk { width: 0; overflow: hidden; opacity: 0; transition: width .2s, opacity .2s; }
+.orbit-onboard .chip.on .chk { width: 15px; opacity: 1; }
+.orbit-onboard .add-goal { display: flex; align-items: center; gap: 9px; margin-top: 30px; }
+.orbit-onboard .add-goal .inp { height: 48px; padding-left: 16px; }
+.orbit-onboard .mini-btn { height: 48px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); font-weight: 600; font-size: 13.5px; color: var(--dim); white-space: nowrap; transition: border-color .15s, color .15s, background .15s; }
+.orbit-onboard .mini-btn:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+
+/* added goals — removable tags below the bar */
+.orbit-onboard .goal-list { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.orbit-onboard .goal-tag {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px;
+  border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent-text);
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 4px 14px oklch(0.7 0.18 45 / .12);
+  animation: ob-pop .4s var(--spring) both;
+}
+.orbit-onboard .goal-tag .gd { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.orbit-onboard .goal-tag .rm { display: grid; place-items: center; width: 20px; height: 20px; border: none; border-radius: 7px; background: transparent; color: var(--accent-text); opacity: .65; transition: opacity .15s, background .15s; }
+.orbit-onboard .goal-tag .rm:hover { opacity: 1; background: oklch(0.88 0.07 55); }
+
+/* ---------------- contact options ---------------- */
+.orbit-onboard .opts { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+.orbit-onboard .opt {
+  display: flex; align-items: center; gap: 15px; padding: 17px 18px; border-radius: 16px; text-align: left;
+  border: 1.5px solid var(--border); background: var(--card); transition: transform .18s var(--spring), border-color .18s, box-shadow .18s;
+}
+.orbit-onboard .opt:hover { transform: translateY(-2px); border-color: var(--border-hi); box-shadow: var(--shadow); }
+.orbit-onboard .opt .oic { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; flex: none; background: var(--accent-soft); color: var(--accent-text); }
+.orbit-onboard .opt .ot { flex: 1; min-width: 0; }
+.orbit-onboard .opt .ot h3 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+.orbit-onboard .opt .ot p { margin: 3px 0 0; font-size: 12.5px; color: var(--faint); }
+.orbit-onboard .opt .arrow { color: var(--faint); transition: transform .2s var(--ease), color .2s; }
+.orbit-onboard .opt:hover .arrow { transform: translateX(3px); color: var(--accent); }
+.orbit-onboard .opt.busy { pointer-events: none; }
+
+.orbit-onboard .imported { margin-top: 22px; display: flex; flex-direction: column; gap: 8px; }
+.orbit-onboard .imp-head { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 650; color: var(--accent-text); }
+.orbit-onboard .imp-head .num { font-variant-numeric: tabular-nums; }
+.orbit-onboard .imp-row { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 12px; background: var(--paper-2); border: 1px solid var(--border); opacity: 0; transform: translateX(-10px); animation: ob-slidein .4s var(--ease) forwards; }
+@keyframes ob-slidein { to { opacity: 1; transform: none; } }
+.orbit-onboard .imp-av { width: 30px; height: 30px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; }
+.orbit-onboard .imp-row .nm { font-size: 13.5px; font-weight: 600; }
+.orbit-onboard .imp-row .co { font-size: 12px; color: var(--faint); margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.orbit-onboard .imp-row .co img { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; background: #fff; }
+
+/* manual add */
+.orbit-onboard .manual { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.orbit-onboard .manual .row { display: flex; align-items: center; gap: 9px; }
+.orbit-onboard .manual .inp { height: 48px; padding-left: 16px; }
+
+/* import (CSV / paste) */
+.orbit-onboard .import-drop {
+  display: inline-flex; align-items: center; gap: 9px; align-self: flex-start; cursor: pointer;
+  height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px dashed var(--border-hi);
+  background: var(--card); font-size: 13.5px; font-weight: 600; color: var(--accent-text);
+  transition: border-color .15s, background .15s;
+}
+.orbit-onboard .import-drop:hover { border-color: var(--accent); background: var(--accent-soft); }
+.orbit-onboard .import-paste {
+  width: 100%; min-height: 92px; padding: 12px 14px; line-height: 1.5; resize: vertical;
+  border-radius: 13px; border: 1.5px solid var(--border); background: var(--card);
+  font-size: 13.5px; color: var(--text); outline: none; transition: border-color .18s, box-shadow .18s;
+}
+.orbit-onboard .import-paste:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.orbit-onboard .import-paste::placeholder { color: var(--faint); }
+.orbit-onboard .mini-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------------- footer nav ---------------- */
+.orbit-onboard .pfoot { display: flex; align-items: center; gap: 12px; padding: 20px 40px 30px; }
+.orbit-onboard .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 650; font-size: 14px;
+  padding: 0 20px; height: 48px; border-radius: 13px; border: 1.5px solid transparent; transition: transform .14s var(--ease), box-shadow .2s, background .2s, opacity .2s;
+}
+.orbit-onboard .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(120,50,10,.25), 0 10px 24px rgba(200,90,30,.2); flex: 1; }
+.orbit-onboard .btn-primary:hover { background: var(--accent-d); transform: translateY(-1px); box-shadow: 0 2px 4px rgba(120,50,10,.28), 0 14px 30px rgba(200,90,30,.26); }
+.orbit-onboard .btn-primary:disabled { opacity: .45; transform: none; box-shadow: none; cursor: not-allowed; }
+.orbit-onboard .btn-back { background: transparent; color: var(--dim); border-color: var(--border); width: 50px; padding: 0; flex: none; }
+.orbit-onboard .btn-back:hover { border-color: var(--border-hi); color: var(--text); }
+
+/* ---------------- chat-style first prompt ---------------- */
+.orbit-onboard .ask { margin-top: 30px; }
+.orbit-onboard .ask-sugs { display: flex; flex-direction: column; gap: 10px; }
+.orbit-onboard .sug {
+  text-align: left; padding: 12px 15px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card);
+  font-size: 13.5px; font-weight: 550; color: var(--text); transition: transform .16s var(--spring), border-color .16s, box-shadow .16s; display: flex; align-items: center; gap: 10px;
+}
+.orbit-onboard .sug:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow); }
+.orbit-onboard .sug .sp { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.orbit-onboard .ask-input { margin-top: 16px; position: relative; display: flex; align-items: center; }
+.orbit-onboard .ask-input .inp { height: 52px; border-radius: 15px; padding-left: 17px; padding-right: 54px; font-size: 14.5px; }
+.orbit-onboard .send {
+  position: absolute; right: 9px; width: 40px; height: 40px; border-radius: 11px; border: none;
+  background: var(--accent); color: #fff; display: grid; place-items: center; transition: transform .14s var(--spring), background .2s, opacity .2s; box-shadow: 0 6px 16px rgba(200,90,30,.28);
+}
+.orbit-onboard .send:hover { transform: scale(1.06); background: var(--accent-d); }
+.orbit-onboard .send:disabled { opacity: .4; background: var(--faint); box-shadow: none; cursor: default; }
+
+/* ============================================================
+   ORBIT VISUAL
+============================================================ */
+.orbit-onboard .orbit-wrap { position: absolute; inset: 0; display: grid; place-items: center; }
+.orbit-onboard .ov-stage { position: relative; width: min(560px, 64vh); aspect-ratio: 1; }
+.orbit-onboard .ov-track { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); border-radius: 50%; border: 1.5px dashed var(--border-hi); opacity: .8; }
+.orbit-onboard .t-inner { width: 42%; height: 42%; }
+.orbit-onboard .t-mid   { width: 70%; height: 70%; }
+.orbit-onboard .t-outer { width: 98%; height: 98%; }
+.orbit-onboard .ov-track.lit { border-color: oklch(0.78 0.09 55); opacity: 1; }
+
+/* NB: class is `ov-ring`, not `ring` — `ring` collides with Tailwind's box-shadow
+   ring utility, which paints a square outline around each orbit ring. */
+.orbit-onboard .ov-ring { position: absolute; inset: 0; }
+.orbit-onboard .r-inner { z-index: 4; }
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-onboard .r-inner { animation: ob-spin 46s linear infinite; }
+  .orbit-onboard .r-mid   { animation: ob-spin 72s linear infinite reverse; }
+  .orbit-onboard .r-outer { animation: ob-spin 104s linear infinite; }
+  .orbit-onboard .r-inner .upright { animation: ob-spin 46s linear infinite reverse; }
+  .orbit-onboard .r-mid   .upright { animation: ob-spin 72s linear infinite; }
+  .orbit-onboard .r-outer .upright { animation: ob-spin 104s linear infinite reverse; }
+}
+@keyframes ob-spin { to { transform: rotate(360deg); } }
+
+.orbit-onboard .node { position: absolute; transform: translate(-50%,-50%); }
+.orbit-onboard .pop { animation: ob-pop .6s var(--spring) both; }
+@keyframes ob-pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+
+/* hub */
+.orbit-onboard .hub {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 6;
+  width: clamp(96px, 17%, 132px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #fff, oklch(0.985 0.01 60) 44%, oklch(0.95 0.05 45) 100%);
+  border: 1px solid var(--border); box-shadow: var(--shadow-lg); display: grid; place-items: center;
+}
+.orbit-onboard .hub .pulse { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { .orbit-onboard .hub .pulse { animation: ob-hub-pulse 3.6s ease-out infinite; } .orbit-onboard .hub .pulse.d { animation-delay: 1.8s; } }
+@keyframes ob-hub-pulse { 0% { transform: scale(.7); opacity: .5; } 75% { opacity: 0; } 100% { transform: scale(1.7); opacity: 0; } }
+.orbit-onboard .hub-init { font-size: clamp(26px, 4vw, 34px); font-weight: 760; letter-spacing: -.04em; background: linear-gradient(150deg, #f97316, #ec4899 55%, #6366f1); -webkit-background-clip: text; background-clip: text; color: transparent; transition: opacity .3s; }
+.orbit-onboard .hub-logo { width: 56%; height: 56%; }
+.orbit-onboard .you-pill {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, calc(clamp(96px,17%,132px) * .5 + 14px)); z-index: 6;
+  font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px 13px; box-shadow: var(--shadow-sm); white-space: nowrap;
+}
+
+/* contact orb */
+.orbit-onboard .orb {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  font-size: 15px; font-weight: 700; letter-spacing: -.02em;
+  box-shadow: 0 8px 18px rgba(40,30,20,.16), inset 0 1px 0 rgba(255,255,255,.45);
+  position: relative;
+}
+/* logo orb: the company logo fills the orb on a clean white face */
+.orbit-onboard .orb.orb-logo { background: #fff; border: 1px solid var(--border); padding: 9px; }
+.orbit-onboard .orb.orb-logo img { width: 100%; height: 100%; object-fit: contain; }
+
+/* goal satellite */
+.orbit-onboard .goal-sat {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+  background: var(--card); border: 1.5px solid oklch(0.86 0.07 55); box-shadow: var(--shadow);
+  font-size: 12.5px; font-weight: 650; color: var(--accent-text);
+}
+.orbit-onboard .goal-sat .gd { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+
+/* caption */
+.orbit-onboard .ov-cap { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; padding: 0 40px; }
+.orbit-onboard .ov-cap .big { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+.orbit-onboard .ov-cap .small { font-size: 12.5px; color: var(--dim); margin-top: 4px; }
+
+/* ambient dots */
+.orbit-onboard .amb { position: absolute; border-radius: 50%; background: var(--accent); opacity: .14; }
+@media (prefers-reduced-motion: no-preference) { .orbit-onboard .amb { animation: ob-float var(--fd, 9s) ease-in-out infinite; } }
+@keyframes ob-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+
+/* ============================================================
+   COMPLETION → LAUNCH
+============================================================ */
+.orbit-onboard .launch { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--paper); animation: ob-fade .4s ease forwards; }
+@keyframes ob-fade { from { opacity: 0; } to { opacity: 1; } }
+.orbit-onboard .launch-core { text-align: center; }
+.orbit-onboard .launch-core .ring2 { width: 120px; height: 120px; margin: 0 auto 26px; border-radius: 50%; border: 2px dashed var(--accent); display: grid; place-items: center; animation: ob-spin 6s linear infinite, ob-zoomin .6s var(--spring); }
+@keyframes ob-zoomin { from { transform: scale(.4); opacity: 0; } }
+.orbit-onboard .launch-core h2 { font-size: 24px; font-weight: 750; letter-spacing: -.03em; margin: 0; }
+.orbit-onboard .launch-core p { color: var(--dim); font-size: 14px; margin: 9px 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-onboard .anim-in > * { opacity: 1; transform: none; animation: none; }
+  .orbit-onboard .pop { animation: none; opacity: 1; }
+}

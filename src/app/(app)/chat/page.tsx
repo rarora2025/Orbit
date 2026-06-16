@@ -1,102 +1,54 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
-import { useChatStore } from '@/lib/chatStore';
+import { useChatStore, type StoredAction, type StoredMsg } from '@/lib/chatStore';
+import { useGoalsStore } from '@/lib/goalsStore';
 import { Contact, columnConfig } from '@/lib/mockData';
-import { Send, Star, Plus, MessageCircle, Trash2 } from 'lucide-react';
+import { Send, Star, Plus, MessageCircle, Trash2, Check, X } from 'lucide-react';
 import OrbitLogo from '@/components/OrbitLogo';
 import CompanyLogo from '@/components/CompanyLogo';
-
-type Reply = { text: string; contacts?: Contact[]; followups?: string[] };
+import ChatMarkdown from '@/components/ChatMarkdown';
+import { CHAT_SUGGESTIONS as SUGGESTIONS } from '@/lib/chatSuggestions';
+import { describeAction, type ChatStreamEvent, type ProposedAction } from '@/lib/chat/tools';
+import { createNdjsonParser } from '@/lib/chat/ndjson';
+import { executeChatAction } from '@/lib/chat/executeAction';
+import { updateProfileMemory } from '@/lib/chat/memory.actions';
+import { listContacts } from '@/lib/contacts.actions';
+import { listGoals } from '@/lib/goals.actions';
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
 
-const SUGGESTIONS = [
-  'Who in my network works in prediction markets?',
-  'How are my contacts related to my career goals?',
-  'Which relationships should I prioritize right now?',
-];
-
-function dedupe(contacts: Contact[]): Contact[] {
-  const seen = new Set<string>();
-  return contacts.filter(c => (seen.has(c.id) ? false : (seen.add(c.id), true)));
-}
-
-// Prototype responder — no model wired up yet. Pulls from the real contact list
-// so answers feel grounded; swap this for an API call when the backend is ready.
-function buildReply(question: string, contacts: Contact[]): Reply {
-  const q = question.toLowerCase();
-
-  if (!contacts.length) {
-    return { text: "Your network is empty right now — add a few people on the Dashboard and I can start connecting the dots." };
+/** Read the NDJSON stream from /api/chat, dispatching each event. */
+async function streamChat(messages: { role: string; content: string }[], onEvent: (e: ChatStreamEvent) => void) {
+  let res: Response;
+  try {
+    res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+  } catch {
+    onEvent({ type: 'error', message: 'Network error reaching the assistant.' });
+    onEvent({ type: 'done' });
+    return;
   }
-
-  // Mention of a specific person or company
-  const mentioned = contacts.filter(c => {
-    const first = c.name.toLowerCase().split(' ')[0];
-    return (first.length > 2 && q.includes(first)) || (c.company && q.includes(c.company.toLowerCase()));
-  });
-  if (mentioned.length) {
-    const c = mentioned[0];
-    const peers = contacts.filter(o => o.id !== c.id && o.tags.some(t => c.tags.includes(t)));
-    const overlap = c.tags.filter(t => peers.some(p => p.tags.includes(t))).slice(0, 3);
-    const text = peers.length
-      ? `${c.name} is in your "${c.status}" lane with ${c.warmth.toLowerCase()} temperature. They overlap with others through ${overlap.join(', ')}:`
-      : `${c.name} is in your "${c.status}" lane. I don't see strong overlap with the rest of your network yet — a good candidate for a warm intro.`;
-    return {
-      text,
-      contacts: dedupe([c, ...peers]).slice(0, 4),
-      followups: ['Who should I prioritize right now?', 'How do they relate to my career goals?'],
-    };
+  if (!res.ok || !res.body) {
+    onEvent({ type: 'error', message: 'The assistant is unavailable right now.' });
+    onEvent({ type: 'done' });
+    return;
   }
-
-  // Topic / tag based
-  const tagCount = new Map<string, Contact[]>();
-  contacts.forEach(c => c.tags.forEach(t => tagCount.set(t, [...(tagCount.get(t) ?? []), c])));
-  const matchedTag = [...tagCount.keys()].find(t => q.includes(t.toLowerCase()));
-  if (matchedTag) {
-    const people = tagCount.get(matchedTag)!;
-    return {
-      text: `${people.length} ${people.length === 1 ? 'person works' : 'people work'} on ${matchedTag}:`,
-      contacts: people,
-      followups: ['Who should I prioritize here?', 'How does this map to my career goals?'],
-    };
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const parser = createNdjsonParser();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    for (const ev of parser.push(decoder.decode(value, { stream: true }))) onEvent(ev as ChatStreamEvent);
   }
-
-  // Prioritisation
-  if (/priorit|focus|who.*reach|next/.test(q)) {
-    const warm = contacts.filter(c => c.warmth === 'High');
-    const stale = contacts.filter(c => c.status === 'Pending');
-    return {
-      text: `I'd focus on your warmest relationships and the ${stale.length} people waiting on a reply in "Pending". Here's where to start:`,
-      contacts: dedupe([...warm, ...stale]).slice(0, 5),
-      followups: ['How do these relate to my career goals?', 'Who works in prediction markets?'],
-    };
-  }
-
-  // Career goals
-  if (/career|goal|draftiq|sports|betting|fantasy/.test(q)) {
-    const relevant = contacts.filter(c => c.tags.some(t => /sport|fantasy|betting|prediction|operator/i.test(t)));
-    return relevant.length
-      ? {
-          text: `For a sports/fantasy direction, these are your most relevant people — that cluster is where your network is strongest for that goal:`,
-          contacts: relevant.slice(0, 5),
-          followups: ['Who should I prioritize right now?', "What's missing from this cluster?"],
-        }
-      : {
-          text: `I don't see many contacts tagged toward sports/fantasy yet — that's a gap worth filling if it's a career focus.`,
-          followups: ['Who should I prioritize right now?'],
-        };
-  }
-
-  // Default: network summary
-  const topTags = [...tagCount.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 3);
-  return {
-    text: `You have ${contacts.length} people in your network. The strongest themes are ${topTags.map(([t, p]) => `${t} (${p.length})`).join(', ')}. Ask me how any two of them connect, or who to prioritise.`,
-    contacts: topTags[0] ? topTags[0][1].slice(0, 3) : undefined,
-    followups: ['Who should I prioritize right now?', 'How do my contacts relate to my career goals?'],
-  };
+  for (const ev of parser.flush()) onEvent(ev as ChatStreamEvent);
 }
 
 function ContactRef({ contact }: { contact: Contact }) {
@@ -129,43 +81,128 @@ function ContactRef({ contact }: { contact: Contact }) {
   );
 }
 
+// Guards the onboarding handoff against React's dev double-mount.
+let consumedHandoffQ: string | null = null;
+
 export default function ChatPage() {
-  const { contacts } = useCRMStore();
-  const { sessions, activeId, newChat, selectChat, deleteChat, addUserMessage, addAssistantMessage } = useChatStore();
+  return (
+    <Suspense fallback={<div className="flex-1 rounded-3xl bg-white border border-stone-200/70" />}>
+      <ChatInner />
+    </Suspense>
+  );
+}
+
+function ChatInner() {
+  const router = useRouter();
+  const handoffQ = useSearchParams().get('q');
+  const { user } = useUser();
+  const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? 'there';
+  const setContacts = useCRMStore(s => s.setContacts);
+  const { saveDraft, markSent } = useCRMStore();
+  const setGoals = useGoalsStore(s => s.setGoals);
+  const { sessions, activeId, newChat, selectChat, deleteChat, addUserMessage, addAssistantMessage, updateMessageActions } = useChatStore();
+
   const [input, setInput] = useState('');
-  const [thinking, setThinking] = useState(false);
+  // The in-flight assistant turn, held locally until the stream finishes.
+  const [stream, setStream] = useState<{ text: string; proposals: ProposedAction[]; phase: 'thinking' | 'streaming' } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const active = sessions.find(s => s.id === activeId) ?? null;
   const messages = active?.messages ?? [];
-  const byId = new Map(contacts.map(c => [c.id, c]));
+  const contactsById = useCRMStore(s => s.contacts);
+  const byId = new Map(contactsById.map(c => [c.id, c]));
+  const busy = stream !== null;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages.length, thinking]);
+  }, [messages.length, stream]);
 
-  function send(text: string) {
-    const q = text.trim();
-    if (!q || thinking) return;
-    const sessionId = addUserMessage(q);
-    setInput('');
-    setThinking(true);
-    setTimeout(() => {
-      const reply = buildReply(q, contacts);
-      addAssistantMessage(sessionId, {
-        role: 'assistant',
-        text: reply.text,
-        contactIds: reply.contacts?.map(c => c.id),
-        followups: reply.followups,
-      });
-      setThinking(false);
-    }, 700);
+  async function refreshStores() {
+    const [c, g] = await Promise.all([listContacts().catch(() => null), listGoals().catch(() => null)]);
+    if (c) setContacts(c);
+    if (g) setGoals(g);
   }
 
-  const empty = messages.length === 0;
-  const lastAssistant = !thinking && messages.length > 0 && messages[messages.length - 1].role === 'assistant'
-    ? (messages[messages.length - 1] as Extract<typeof messages[number], { role: 'assistant' }>)
-    : null;
+  async function send(text: string) {
+    const q = text.trim();
+    if (!q || busy) return;
+    const sessionId = addUserMessage(q);
+    setInput('');
+    setStream({ text: '', proposals: [], phase: 'thinking' });
+
+    // History = the session's messages (now including this user turn) for the model.
+    const history = (useChatStore.getState().sessions.find(s => s.id === sessionId)?.messages ?? [])
+      .map(m => ({ role: m.role, content: m.text }));
+
+    let text2 = '';
+    let proposals: ProposedAction[] = [];
+    await streamChat(history, (ev) => {
+      if (ev.type === 'text') {
+        text2 += ev.delta;
+        setStream({ text: text2, proposals, phase: 'streaming' });
+      } else if (ev.type === 'proposals') {
+        proposals = ev.proposals;
+        setStream({ text: text2, proposals, phase: 'streaming' });
+      } else if (ev.type === 'error') {
+        text2 += (text2 ? '\n\n' : '') + ev.message;
+        setStream({ text: text2, proposals, phase: 'streaming' });
+      }
+    });
+
+    // Commit the finished assistant turn to the store.
+    const messageId = crypto.randomUUID();
+    const actions: StoredAction[] = proposals.map(p => ({ action: p, summary: describeAction(p), status: 'pending' as const }));
+    addAssistantMessage(sessionId, {
+      role: 'assistant',
+      id: messageId,
+      text: text2,
+      ...(actions.length ? { actions } : {}),
+    });
+    setStream(null);
+
+    if (text2) void updateProfileMemory({ user: q, assistant: text2 });
+  }
+
+  function messageActions(messageId: string): StoredAction[] {
+    const m = messages.find(x => x.role === 'assistant' && x.id === messageId);
+    return (m && m.role === 'assistant' && m.actions) || [];
+  }
+
+  async function confirmAction(messageId: string, actionId: string) {
+    const current = messageActions(messageId);
+    const idx = current.findIndex(a => a.action.id === actionId);
+    if (idx < 0 || current[idx].status !== 'pending') return;
+    const result = await executeChatAction(current[idx].action);
+    const next = current.slice();
+    next[idx] = result.ok
+      ? { ...next[idx], status: 'confirmed', receipt: result.receipt, draft: result.draft, draftContactId: result.draftContactId }
+      : { ...next[idx], status: 'failed', receipt: result.error };
+    updateMessageActions(activeId!, messageId, next);
+    if (result.ok) void refreshStores();
+  }
+
+  function cancelAction(messageId: string, actionId: string) {
+    const current = messageActions(messageId);
+    const idx = current.findIndex(a => a.action.id === actionId);
+    if (idx < 0 || current[idx].status !== 'pending') return;
+    const next = current.slice();
+    next[idx] = { ...next[idx], status: 'cancelled' };
+    updateMessageActions(activeId!, messageId, next);
+  }
+
+  const empty = messages.length === 0 && !busy && !handoffQ;
+
+  // Onboarding handoff: stream the first question once, then clear the URL.
+  useEffect(() => {
+    if (!handoffQ) return;
+    if (consumedHandoffQ !== handoffQ) {
+      consumedHandoffQ = handoffQ;
+      const q = handoffQ;
+      queueMicrotask(() => { void send(q); });
+    }
+    router.replace('/chat');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoffQ]);
 
   return (
     <div className="flex-1 flex min-h-0 rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
@@ -174,7 +211,7 @@ export default function ChatPage() {
         <div className="p-3 flex-shrink-0">
           <button
             onClick={newChat}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500 text-white text-[13px] font-semibold hover:bg-orange-600 transition active:scale-[0.98] shadow-sm shadow-orange-500/30"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-[13px] font-semibold hover:border-orange-300 hover:text-orange-600 transition active:scale-[0.98]"
           >
             <Plus size={15} />
             New chat
@@ -215,17 +252,20 @@ export default function ChatPage() {
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
           {empty ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-4">
-                <OrbitLogo size={26} />
+              <div className="relative mb-4 chat-hero-logo">
+                <div className="absolute inset-0 -z-10 rounded-full bg-orange-400/40 blur-2xl chat-hero-glow" aria-hidden />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-50 to-stone-100 ring-1 ring-stone-200/70 shadow-sm flex items-center justify-center">
+                  <OrbitLogo size={26} />
+                </div>
               </div>
-              <h2 className="text-base font-semibold text-stone-800">Ask anything about your network</h2>
-              <p className="text-sm text-stone-400 mt-1 mb-5">How people connect, who to prioritise, or how they map to your goals.</p>
-              <div className="flex flex-col gap-2 w-full">
-                {SUGGESTIONS.map(s => (
+              <h2 className="text-[15px] font-semibold text-stone-800 mb-5 chat-hero-title">Jump in, {firstName}</h2>
+              <div className="flex flex-col gap-1.5 w-full">
+                {SUGGESTIONS.map((s, i) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-left text-sm text-stone-600 bg-stone-50 hover:bg-orange-50 hover:text-orange-700 border border-stone-200 rounded-xl px-3.5 py-2.5 transition-colors"
+                    style={{ animationDelay: `${0.22 + i * 0.07}s` }}
+                    className="chat-hero-sug text-left text-[13px] text-stone-600 bg-stone-50 hover:bg-white hover:border-stone-300 hover:-translate-y-0.5 hover:shadow-sm border border-stone-200 rounded-lg px-3.5 py-2.5 transition-all duration-200"
                   >
                     {s}
                   </button>
@@ -235,55 +275,36 @@ export default function ChatPage() {
           ) : (
             <div className="max-w-2xl mx-auto space-y-4">
               {messages.map((m, i) => (
-                <div key={i} className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {m.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <OrbitLogo size={16} />
-                    </div>
-                  )}
-                  <div className={m.role === 'user' ? 'max-w-[80%]' : 'flex-1 min-w-0 space-y-2'}>
-                    <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                      m.role === 'user'
-                        ? 'bg-orange-500 text-white rounded-br-md inline-block'
-                        : 'bg-stone-100 text-stone-700 rounded-bl-md'
-                    }`}>
-                      {m.text}
-                    </div>
-                    {m.role === 'assistant' && m.contactIds && (
-                      <div className="space-y-1.5">
-                        {m.contactIds.map(id => byId.get(id)).filter(Boolean).map(c => (
-                          <ContactRef key={c!.id} contact={c!} />
-                        ))}
+                <MessageRow
+                  key={i}
+                  message={m}
+                  byId={byId}
+                  onConfirm={confirmAction}
+                  onCancel={cancelAction}
+                  onSaveDraft={(contactId, content) => saveDraft(contactId, { channel: 'manual', content })}
+                  onMarkSent={(contactId, content) => markSent(contactId, { channel: 'manual', content })}
+                />
+              ))}
+
+              {/* In-flight streaming turn */}
+              {stream && (
+                <div className="flex gap-2.5 justify-start chat-in">
+                  <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <OrbitLogo size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {stream.phase === 'thinking' && !stream.text ? (
+                      <div className="bg-stone-100 rounded-2xl rounded-bl-md px-3.5 py-3 inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce" />
+                      </div>
+                    ) : (
+                      <div className="bg-stone-100 text-stone-700 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+                        {stream.text}<span className="chat-caret" />
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
-              {thinking && (
-                <div className="flex gap-2.5 justify-start">
-                  <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <OrbitLogo size={16} />
-                  </div>
-                  <div className="bg-stone-100 rounded-2xl rounded-bl-md px-3.5 py-3 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce" />
-                  </div>
-                </div>
-              )}
-
-              {/* Follow-up suggestions after the latest reply */}
-              {lastAssistant?.followups && lastAssistant.followups.length > 0 && (
-                <div className="flex flex-wrap gap-2 pl-9 pt-1">
-                  {lastAssistant.followups.map(f => (
-                    <button
-                      key={f}
-                      onClick={() => send(f)}
-                      className="text-[13px] text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-full px-3 py-1.5 transition-colors"
-                    >
-                      {f}
-                    </button>
-                  ))}
                 </div>
               )}
             </div>
@@ -299,12 +320,12 @@ export default function ChatPage() {
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask about your network…"
+              placeholder="Ask, or tell me what happened…"
               className="flex-1 bg-transparent text-sm text-stone-800 placeholder-stone-400 focus:outline-none"
             />
             <button
               type="submit"
-              disabled={!input.trim() || thinking}
+              disabled={!input.trim() || busy}
               aria-label="Send"
               className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center hover:bg-orange-600 disabled:opacity-40 disabled:hover:bg-orange-500 transition active:scale-95"
             >
@@ -312,6 +333,144 @@ export default function ChatPage() {
             </button>
           </form>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageRow({
+  message, byId, onConfirm, onCancel, onSaveDraft, onMarkSent,
+}: {
+  message: StoredMsg;
+  byId: Map<string, Contact>;
+  onConfirm: (messageId: string, actionId: string) => void;
+  onCancel: (messageId: string, actionId: string) => void;
+  onSaveDraft: (contactId: string, content: string) => void;
+  onMarkSent: (contactId: string, content: string) => void;
+}) {
+  if (message.role === 'user') {
+    return (
+      <div className="flex justify-end chat-in">
+        <div className="max-w-[80%] bg-orange-500 text-white rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm leading-relaxed inline-block whitespace-pre-wrap">
+          {message.text}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-2.5 justify-start chat-in">
+      <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <OrbitLogo size={16} />
+      </div>
+      <div className="flex-1 min-w-0 space-y-2">
+        {message.text.trim() && (
+          <div className="bg-stone-100 text-stone-700 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm">
+            <ChatMarkdown text={message.text} />
+          </div>
+        )}
+        {message.contactIds && (
+          <div className="space-y-1.5">
+            {message.contactIds.map(id => byId.get(id)).filter(Boolean).map(c => (
+              <ContactRef key={c!.id} contact={c!} />
+            ))}
+          </div>
+        )}
+        {message.actions?.map(a => (
+          <ActionCard
+            key={a.action.id}
+            stored={a}
+            onConfirm={() => onConfirm(message.id!, a.action.id)}
+            onCancel={() => onCancel(message.id!, a.action.id)}
+            onSaveDraft={onSaveDraft}
+            onMarkSent={onMarkSent}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ActionCard({
+  stored, onConfirm, onCancel, onSaveDraft, onMarkSent,
+}: {
+  stored: StoredAction;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onSaveDraft: (contactId: string, content: string) => void;
+  onMarkSent: (contactId: string, content: string) => void;
+}) {
+  const [running, setRunning] = useState(false);
+  const [draftSaved, setDraftSaved] = useState<null | 'saved' | 'sent'>(null);
+
+  if (stored.status === 'confirmed') {
+    return (
+      <div className="chat-in rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-emerald-800">
+          <Check size={14} className="flex-shrink-0" />
+          {stored.receipt ?? stored.summary}
+        </div>
+        {stored.draft && stored.draftContactId && (
+          <div className="mt-2 rounded-lg bg-white border border-emerald-100 p-2.5">
+            <p className="text-[13px] text-stone-700 whitespace-pre-wrap leading-relaxed">{stored.draft}</p>
+            <div className="flex items-center gap-2 mt-2">
+              {draftSaved ? (
+                <span className="text-[12px] font-medium text-emerald-700">{draftSaved === 'sent' ? 'Marked sent ✓' : 'Saved as draft ✓'}</span>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { onSaveDraft(stored.draftContactId!, stored.draft!); setDraftSaved('saved'); }}
+                    className="px-2.5 py-1 rounded-lg border border-stone-200 text-[12px] font-medium text-stone-600 hover:border-stone-300"
+                  >
+                    Save draft
+                  </button>
+                  <button
+                    onClick={() => { onMarkSent(stored.draftContactId!, stored.draft!); setDraftSaved('sent'); }}
+                    className="px-2.5 py-1 rounded-lg bg-orange-500 text-white text-[12px] font-semibold hover:bg-orange-600"
+                  >
+                    Mark sent
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (stored.status === 'cancelled') {
+    return <div className="chat-in text-[12px] text-stone-400 pl-1">Skipped · {stored.summary}</div>;
+  }
+
+  if (stored.status === 'failed') {
+    return (
+      <div className="chat-in rounded-xl border border-red-200 bg-red-50/70 px-3 py-2 text-[13px] text-red-700">
+        {stored.receipt ?? "That didn't work."}
+      </div>
+    );
+  }
+
+  // pending
+  return (
+    <div className="chat-in rounded-xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm">
+      <p className="text-[13px] font-semibold text-stone-800">{stored.summary}</p>
+      <div className="flex items-center gap-2 mt-2.5">
+        <button
+          disabled={running}
+          onClick={() => { setRunning(true); onConfirm(); }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 text-white text-[12px] font-semibold hover:bg-orange-600 disabled:opacity-60 transition active:scale-95"
+        >
+          {running ? <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" /> : <Check size={13} />}
+          Confirm
+        </button>
+        <button
+          disabled={running}
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 text-[12px] font-medium text-stone-500 hover:text-stone-700 hover:border-stone-300 transition active:scale-95"
+        >
+          <X size={13} />
+          Cancel
+        </button>
       </div>
     </div>
   );

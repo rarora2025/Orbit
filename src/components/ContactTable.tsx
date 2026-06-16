@@ -9,17 +9,19 @@ import TemperatureInfo from './TemperatureInfo';
 import ContactDateBadge from './ContactDateBadge';
 import ContactLinks from './ContactLinks';
 import { companyDisplayName } from '@/lib/companyLogo';
+import { Trash2 } from 'lucide-react';
 
 interface Props {
   contacts: Contact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onChangeStatus: (id: string, status: Status) => void;
+  onDelete: (id: string) => void;
 }
 
 const HEADERS = ['Person', 'Company / Role', 'Status', 'Temperature', 'Date', 'Reach out'];
 
-export default function ContactTable({ contacts, selectedId, onSelect, onChangeStatus }: Props) {
+export default function ContactTable({ contacts, selectedId, onSelect, onChangeStatus, onDelete }: Props) {
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -53,6 +55,8 @@ export default function ContactTable({ contacts, selectedId, onSelect, onChangeS
                   )}
                 </th>
               ))}
+              {/* Actions (delete) — no visible label */}
+              <th className="w-10 px-2 py-2.5" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -118,6 +122,18 @@ export default function ContactTable({ contacts, selectedId, onSelect, onChangeS
                   {/* Reach out — quick links (LinkedIn · email · phone) */}
                   <td className="px-4 py-3">
                     <ContactLinks contact={contact} size={16} />
+                  </td>
+
+                  {/* Delete — revealed on row hover */}
+                  <td className="px-2 py-3 text-right">
+                    <button
+                      type="button"
+                      aria-label={`Delete ${contact.name}`}
+                      onClick={(e) => { e.stopPropagation(); onDelete(contact.id); }}
+                      className="p-1.5 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </td>
                 </tr>
               );
