@@ -59,6 +59,25 @@ describe('addGoal', () => {
   });
 });
 
+describe('updateGoal', () => {
+  it('patches only the supplied fields, scoped to user + id', async () => {
+    const { updateGoal } = await import('./goals.actions');
+    await updateGoal('g1', { imageUrl: 'http://media/x' });
+    const patch = update.mock.calls[0][0];
+    expect(patch.image_url).toBe('http://media/x');
+    expect('title' in patch).toBe(false); // title omitted when not supplied
+    expect(patch.updated_at).toBeTruthy();
+    expect(eq).toHaveBeenCalledWith('user_id', 'user_123');
+    expect(eq).toHaveBeenCalledWith('id', 'g1');
+  });
+
+  it('trims the title when supplied', async () => {
+    const { updateGoal } = await import('./goals.actions');
+    await updateGoal('g1', { title: '  Renamed  ' });
+    expect(update.mock.calls[0][0].title).toBe('Renamed');
+  });
+});
+
 describe('deleteGoal', () => {
   it('scopes the delete to the userId and the id', async () => {
     const { deleteGoal } = await import('./goals.actions');

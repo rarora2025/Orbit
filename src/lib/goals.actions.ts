@@ -2,7 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { supabaseAdmin } from './supabase';
-import { toggleMember, type Goal } from './goals';
+import { type Goal } from './goals';
 
 interface Row {
   id: string;
@@ -102,12 +102,15 @@ async function requireGoal(id: string): Promise<Goal> {
 
 export async function addGoalMember(goalId: string, contactId: string): Promise<Goal> {
   const goal = await requireGoal(goalId);
-  const next = goal.memberIds.includes(contactId) ? goal.memberIds : toggleMember(goal.memberIds, contactId);
+  // Idempotent: re-adding an existing member is a no-op write.
+  const next = goal.memberIds.includes(contactId)
+    ? goal.memberIds
+    : [...goal.memberIds, contactId];
   return setMembers(goalId, next);
 }
 
 export async function removeGoalMember(goalId: string, contactId: string): Promise<Goal> {
   const goal = await requireGoal(goalId);
-  const next = goal.memberIds.includes(contactId) ? toggleMember(goal.memberIds, contactId) : goal.memberIds;
+  const next = goal.memberIds.filter((id) => id !== contactId);
   return setMembers(goalId, next);
 }

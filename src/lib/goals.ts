@@ -4,7 +4,8 @@ export interface Goal {
   title: string;
   /** AI-generated, key-free media URL. `null` while generating or on failure. */
   imageUrl: string | null;
-  /** Contact ids associated with this goal (single source of truth for the link). */
+  /** Contact ids associated with this goal. Mirrors the `member_ids` column;
+   *  the DB row is the canonical store. */
   memberIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -13,11 +14,4 @@ export interface Goal {
 /** Default, tasteful image prompt built from a goal title (no user prompt-writing). */
 export function goalImagePrompt(title: string): string {
   return `"${title.trim()}", minimal modern editorial illustration, soft warm palette, abstract, no text`;
-}
-
-/** Add the id if absent, remove it if present. Pure — returns a new array. */
-export function toggleMember(memberIds: string[], contactId: string): string[] {
-  return memberIds.includes(contactId)
-    ? memberIds.filter((id) => id !== contactId)
-    : [...memberIds, contactId];
 }
