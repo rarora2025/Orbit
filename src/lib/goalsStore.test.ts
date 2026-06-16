@@ -32,20 +32,42 @@ describe('goalsStore hydration', () => {
 });
 
 describe('goalsStore.addGoal', () => {
-  it('inserts the created goal then patches in the generated image', async () => {
+  it('inserts the created goal immediately, then patches in the image in the background', async () => {
+    // Defer image generation so we can observe the goal appearing before the image.
+    let resolveImg!: (g: Goal | null) => void;
     (api.addGoal as ReturnType<typeof vi.fn>).mockResolvedValue(g('a'));
-    (api.generateGoalImage as ReturnType<typeof vi.fn>).mockResolvedValue(g('a', [], 'http://img'));
+    (api.generateGoalImage as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise<Goal | null>((res) => { resolveImg = res; }),
+    );
+
     await useGoalsStore.getState().addGoal('My Goal');
     expect(api.addGoal).toHaveBeenCalledWith({ title: 'My Goal' });
     expect(api.generateGoalImage).toHaveBeenCalledWith('a', 'a');
-    expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBe('http://img');
+    // Goal is present immediately; the image hasn't resolved yet.
+    expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBeNull();
+
+    // Image resolves in the background and patches in.
+    resolveImg(g('a', [], 'http://img'));
+    await vi.waitFor(() =>
+      expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBe('http://img'),
+    );
   });
 
   it('keeps the goal imageless when generation returns null', async () => {
     (api.addGoal as ReturnType<typeof vi.fn>).mockResolvedValue(g('a'));
     (api.generateGoalImage as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     await useGoalsStore.getState().addGoal('My Goal');
+    await vi.waitFor(() => expect(api.generateGoalImage).toHaveBeenCalled());
     expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.imageUrl).toBeNull();
+  });
+
+  it('renameGoal upserts the updated goal', async () => {
+    const renamed: Goal = { ...g('a'), title: 'Renamed' };
+    (api.updateGoal as ReturnType<typeof vi.fn>).mockResolvedValue(renamed);
+    useGoalsStore.setState({ goals: [g('a')], loaded: true });
+    await useGoalsStore.getState().renameGoal('a', 'Renamed');
+    expect(api.updateGoal).toHaveBeenCalledWith('a', { title: 'Renamed' });
+    expect(useGoalsStore.getState().goals.find((x) => x.id === 'a')?.title).toBe('Renamed');
   });
 });
 

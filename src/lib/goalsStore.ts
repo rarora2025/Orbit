@@ -27,9 +27,12 @@ export const useGoalsStore = create<GoalsStore>()((set, get) => {
     addGoal: async (title) => {
       const created = await api.addGoal({ title });
       upsert(created);
-      // Generate the photo in the background; patch it in when ready.
-      const withImage = await api.generateGoalImage(created.id, created.title);
-      if (withImage) upsert(withImage);
+      // Generate the photo in the background (fire-and-forget): the goal is
+      // already usable; the card shows a spinner until the image patches in.
+      // generateGoalImage never throws (it returns null on failure).
+      void api.generateGoalImage(created.id, created.title).then((withImage) => {
+        if (withImage) upsert(withImage);
+      });
     },
     renameGoal: async (id, title) => { upsert(await api.updateGoal(id, { title })); },
     deleteGoal: async (id) => {
