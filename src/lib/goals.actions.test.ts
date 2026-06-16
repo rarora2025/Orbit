@@ -165,4 +165,20 @@ describe('generateGoalImage', () => {
     const { generateGoalImage } = await import('./goals.actions');
     expect(await generateGoalImage('g1', 'T')).toBeNull();
   });
+
+  it('returns null without throwing when the upload fails', async () => {
+    process.env.POLLINATIONS_API_KEY = 'sk_test';
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['img'], { type: 'image/jpeg' }) })
+      .mockResolvedValueOnce({ ok: false, status: 500 }) as unknown as typeof fetch;
+    const { generateGoalImage } = await import('./goals.actions');
+    expect(await generateGoalImage('g1', 'T')).toBeNull();
+  });
+
+  it('returns null without throwing when the network is unavailable', async () => {
+    process.env.POLLINATIONS_API_KEY = 'sk_test';
+    globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('network error')) as unknown as typeof fetch;
+    const { generateGoalImage } = await import('./goals.actions');
+    expect(await generateGoalImage('g1', 'T')).toBeNull();
+  });
 });

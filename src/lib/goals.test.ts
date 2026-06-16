@@ -11,4 +11,10 @@ describe('goalImagePrompt', () => {
   it('trims surrounding whitespace from the title', () => {
     expect(goalImagePrompt('  Recruiting  ')).toContain('"Recruiting"');
   });
+
+  it('strips embedded quotes and newlines so the title cannot break out', () => {
+    expect(goalImagePrompt('Evil "x"\nbreak')).toBe(
+      '"Evil x break", minimal modern editorial illustration, soft warm palette, abstract, no text',
+    );
+  });
 });

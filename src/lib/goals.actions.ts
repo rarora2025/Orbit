@@ -133,7 +133,7 @@ function parseUploadedUrl(body: unknown): string | null {
  */
 export async function generateGoalImage(goalId: string, title: string): Promise<Goal | null> {
   const key = process.env.POLLINATIONS_API_KEY;
-  if (!key) return null;
+  if (!key?.trim()) return null;
   try {
     const prompt = encodeURIComponent(goalImagePrompt(title));
     const genRes = await fetch(
