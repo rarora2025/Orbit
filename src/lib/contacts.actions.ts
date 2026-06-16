@@ -44,11 +44,17 @@ export async function listContacts(): Promise<Contact[]> {
   const byContact = await listUserInteractions();
 
   // Goal membership is the single source of truth for a contact's goal text.
-  const { data: goalRows } = await supabaseAdmin
+  // This is the one canonical contacts read — it's also used by the mutation
+  // helpers and the AI context, so they all see fresh, consistent goal text. The
+  // extra (small, indexed) goals query per call is an accepted cost at this scale.
+  // A goals-read failure is non-fatal: contacts must still load, so we log and
+  // fall back to no goal text rather than throwing.
+  const { data: goalRows, error: goalError } = await supabaseAdmin
     .from('goals')
     .select('title, member_ids')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
+  if (goalError) console.warn('Failed to load goal membership; contact.goal will be empty', goalError);
   const titlesByContact = new Map<string, string[]>();
   for (const row of (goalRows ?? []) as { title: string; member_ids: string[] }[]) {
     for (const cid of Array.isArray(row.member_ids) ? row.member_ids : []) {

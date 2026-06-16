@@ -87,9 +87,10 @@ describe('listContacts goal derivation from membership', () => {
       })
       .mockResolvedValueOnce({ data: [], error: null }) // interactions
       .mockResolvedValueOnce({
+        // The goals read selects only title + member_ids.
         data: [
-          { id: 'g1', title: 'Recruiting', image_url: null, member_ids: ['c1'], created_at: '', updated_at: '' },
-          { id: 'g2', title: 'Fundraising', image_url: null, member_ids: ['c1'], created_at: '', updated_at: '' },
+          { title: 'Recruiting', member_ids: ['c1'] },
+          { title: 'Fundraising', member_ids: ['c1'] },
         ],
         error: null,
       });
@@ -102,14 +103,15 @@ describe('listContacts goal derivation from membership', () => {
 });
 
 describe('lastContacted "last activity" stamping', () => {
-  // Seed one existing contact for the read, then an empty interactions read.
+  // Seed one existing contact for the read, then empty interactions + goals reads.
   function seedContact(lastContacted: string) {
     order
       .mockResolvedValueOnce({
         data: [{ id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', lastContacted, interactions: [] } }],
         error: null,
       })
-      .mockResolvedValueOnce({ data: [], error: null });
+      .mockResolvedValueOnce({ data: [], error: null }) // interactions
+      .mockResolvedValueOnce({ data: [], error: null }); // goals
   }
 
   // A chainable .update(...).eq().eq().select().single() that captures its payload.
