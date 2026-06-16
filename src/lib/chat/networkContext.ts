@@ -16,7 +16,7 @@ function contactLine(c: Contact): string {
   const parts = [c.name];
   const roleCo = [c.role, c.company].filter(Boolean).join(' at ');
   if (roleCo) parts.push(roleCo);
-  const meta = [c.status, c.warmth];
+  const meta: string[] = [c.status, c.warmth];
   if (c.tags.length) meta.push(`tags: ${c.tags.join(', ')}`);
   if (c.goal) meta.push(`goal: ${c.goal}`);
   const last = shortDate(c.lastContacted);
