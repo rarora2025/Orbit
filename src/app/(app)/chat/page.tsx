@@ -7,16 +7,11 @@ import { Contact, columnConfig } from '@/lib/mockData';
 import { Send, Star, Plus, MessageCircle, Trash2 } from 'lucide-react';
 import OrbitLogo from '@/components/OrbitLogo';
 import CompanyLogo from '@/components/CompanyLogo';
+import { CHAT_SUGGESTIONS as SUGGESTIONS } from '@/lib/chatSuggestions';
 
 type Reply = { text: string; contacts?: Contact[]; followups?: string[] };
 
 const TEMP_LEVEL: Record<Contact['warmth'], number> = { Low: 1, Medium: 2, High: 3 };
-
-const SUGGESTIONS = [
-  'Who in my network works in prediction markets?',
-  'How are my contacts related to my career goals?',
-  'Which relationships should I prioritize right now?',
-];
 
 function dedupe(contacts: Contact[]): Contact[] {
   const seen = new Set<string>();

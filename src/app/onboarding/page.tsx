@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import OrbitLogo from '@/components/OrbitLogo';
 import { completeOnboarding, type OnboardingContactInput } from '@/lib/onboarding.actions';
+import { addGoal as createGoal, generateGoalImage, deleteGoal as removeGoalApi } from '@/lib/goals.actions';
 import {
-  GOAL_OPTS, SUGS, ORB_COLORS, SAMPLE_CONTACTS, initials, type ContactSeed,
+  GOAL_PLACEHOLDERS, ORB_COLORS, SAMPLE_CONTACTS, initials, type ContactSeed,
 } from '@/lib/onboardingSamples';
+import { CHAT_SUGGESTIONS } from '@/lib/chatSuggestions';
 
 const STEP_COUNT = 4;
 
@@ -20,7 +22,8 @@ type Person = {
   color: string;
   seed?: ContactSeed;
 };
-type GoalPick = { label: string; cl: string };
+// `id` is set once the goal is created for real (so it can be deleted again).
+type GoalPick = { label: string; cl: string; id?: string };
 
 // Ambient floating dots — fixed positions (kept static so render stays pure and
 // SSR/CSR match). Purely decorative background motion behind the orbit stage.
@@ -147,9 +150,7 @@ function StepIdentity({
   return (
     <div className="step-key anim-in">
       <div>
-        <div className="eyebrow">Welcome to Orbit</div>
-        <h1 className="q">Let&apos;s get you<br />into orbit.</h1>
-        <p className="sub">A personal CRM that keeps every relationship in motion. First, the basics — this is how we&apos;ll greet you.</p>
+        <h1 className="q">Let&apos;s get you into orbit.</h1>
       </div>
       <div className="fields">
         <div className="field">
@@ -173,35 +174,49 @@ function StepIdentity({
 }
 
 function StepGoals({
-  goals, toggleGoal, addGoal,
+  goals, addGoal, removeGoal,
 }: {
   goals: GoalPick[];
-  toggleGoal: (g: GoalPick) => void;
   addGoal: (label: string) => void;
+  removeGoal: (label: string) => void;
 }) {
   const [custom, setCustom] = useState('');
-  const has = (l: string) => goals.some((g) => g.label === l);
+  // Cycle the placeholder through example goals while the field is empty.
+  const [ph, setPh] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setPh((p) => (p + 1) % GOAL_PLACEHOLDERS.length), 2600);
+    return () => clearInterval(id);
+  }, []);
   const submitCustom = () => { if (custom.trim()) { addGoal(custom.trim()); setCustom(''); } };
   return (
     <div className="step-key anim-in">
       <div>
-        <div className="eyebrow">Step 2 · Your goals</div>
-        <h1 className="q">What are you<br />working toward?</h1>
-        <p className="sub">Orbit surfaces the right people for each goal. Pick a few — or skip and add them later.</p>
-      </div>
-      <div className="chips">
-        {GOAL_OPTS.map((g) => (
-          <button key={g.label} className={'chip' + (has(g.label) ? ' on' : '')} style={{ ['--cl' as string]: g.cl }} onClick={() => toggleGoal(g)}>
-            <span className="dot" />
-            {g.label}
-            <svg className="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-          </button>
-        ))}
+        <h1 className="q">What are you working toward?</h1>
       </div>
       <div className="add-goal">
-        <input className="inp" placeholder="Add your own goal…" value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitCustom()} />
-        <button className="mini-btn" onClick={submitCustom}>Add</button>
+        <input
+          className="inp"
+          placeholder={GOAL_PLACEHOLDERS[ph]}
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submitCustom()}
+          autoFocus
+        />
+        <button className="mini-btn" onClick={submitCustom}>Add goal</button>
       </div>
+      {goals.length > 0 && (
+        <div className="goal-list">
+          {goals.map((g) => (
+            <span className="goal-tag" key={g.label}>
+              <span className="gd" style={{ background: g.cl }} />
+              {g.label}
+              <button className="rm" onClick={() => removeGoal(g.label)} aria-label={`Remove ${g.label}`}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6l-12 12" /></svg>
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -225,9 +240,7 @@ function StepContacts({
   return (
     <div className="step-key anim-in">
       <div>
-        <div className="eyebrow">Step 3 · Your network</div>
-        <h1 className="q">Bring your<br />network in.</h1>
-        <p className="sub">Import your contacts in one tap, or add a few by hand to get a feel for it.</p>
+        <h1 className="q">Bring your network in.</h1>
       </div>
 
       {mode !== 'manual' && (
@@ -295,13 +308,11 @@ function StepAsk({
   return (
     <div className="step-key anim-in">
       <div>
-        <div className="eyebrow">Step 4 · You&apos;re ready</div>
-        <h1 className="q">Ask Orbit<br />anything.</h1>
-        <p className="sub">Your network is in motion. Try a question to see how Orbit thinks about your relationships.</p>
+        <h1 className="q">Ask Orbit anything.</h1>
       </div>
       <div className="ask">
         <div className="ask-sugs">
-          {SUGS.map((s) => (
+          {CHAT_SUGGESTIONS.map((s) => (
             <button key={s} className="sug" onClick={() => finish(s)}><span className="sp" />{s}</button>
           ))}
         </div>
@@ -361,10 +372,29 @@ function OnboardingFlow() {
     setEmail(user.primaryEmailAddress?.emailAddress ?? '');
   }
 
-  const toggleGoal = (g: GoalPick) =>
-    setGoals((gs) => gs.some((x) => x.label === g.label) ? gs.filter((x) => x.label !== g.label) : [...gs, g]);
-  const addGoal = (label: string) =>
-    setGoals((gs) => gs.some((x) => x.label === label) ? gs : [...gs, { label, cl: ORB_COLORS[gs.length % ORB_COLORS.length] }]);
+  // Create the goal for real as it's typed — same path as the rest of the app
+  // (a Goal row, then an AI photo generated in the background). Test mode keeps
+  // it local-only so nothing is written. The orbit satellite shows immediately;
+  // the real id is patched in once the row exists so it can be removed again.
+  const addGoalLive = async (label: string) => {
+    const t = label.trim();
+    if (!t || goals.some((g) => g.label.toLowerCase() === t.toLowerCase())) return;
+    const cl = ORB_COLORS[goals.length % ORB_COLORS.length];
+    setGoals((gs) => [...gs, { label: t, cl }]);
+    if (testMode) return;
+    try {
+      const goal = await createGoal({ title: t });
+      setGoals((gs) => gs.map((g) => (g.label === t ? { ...g, id: goal.id } : g)));
+      void generateGoalImage(goal.id, goal.title).catch(() => {});
+    } catch (e) {
+      console.error('Create goal failed', e);
+    }
+  };
+  const removeGoalLive = (label: string) => {
+    const target = goals.find((g) => g.label === label);
+    setGoals((gs) => gs.filter((g) => g.label !== label));
+    if (!testMode && target?.id) void removeGoalApi(target.id).catch(console.error);
+  };
 
   const importAll = () => {
     SAMPLE_CONTACTS.forEach((c, i) => {
@@ -403,7 +433,7 @@ function OnboardingFlow() {
 
     try {
       await Promise.all([
-        completeOnboarding({ contacts: payloadContacts, goals: goals.map((g) => g.label) }),
+        completeOnboarding({ contacts: payloadContacts }),
         delay(1400),
       ]);
       if (user) {
@@ -450,7 +480,7 @@ function OnboardingFlow() {
           <div className="pbody">
             <div key={step}>
               {step === 0 && <StepIdentity name={name} setName={setName} email={email} />}
-              {step === 1 && <StepGoals goals={goals} toggleGoal={toggleGoal} addGoal={addGoal} />}
+              {step === 1 && <StepGoals goals={goals} addGoal={addGoalLive} removeGoal={removeGoalLive} />}
               {step === 2 && <StepContacts contacts={contacts} importAll={importAll} addManual={addManual} />}
               {step === 3 && <StepAsk draft={draft} setDraft={setDraft} finish={finish} />}
             </div>

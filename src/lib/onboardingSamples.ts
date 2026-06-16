@@ -3,21 +3,17 @@
 // that turns the chosen sample people into real contacts.
 import type { Status, Warmth } from './mockData';
 
-/** Pre-baked goal suggestions shown as chips on the Goals step. */
-export const GOAL_OPTS: { label: string; cl: string }[] = [
-  { label: 'Fundraising', cl: '#6366f1' },
-  { label: 'Hiring', cl: '#10b981' },
-  { label: 'Finding a job', cl: '#3b82f6' },
-  { label: 'Sales & BD', cl: '#f59e0b' },
-  { label: 'Mentors', cl: '#ec4899' },
-  { label: 'Partnerships', cl: '#14b8a6' },
-];
-
-/** First-question suggestions on the Ask step. */
-export const SUGS: string[] = [
-  'Who should I follow up with this week?',
-  'Who in my network can help me fundraise?',
-  'Which relationships are going cold?',
+/** Rotating placeholder prompts for the single "add a goal" bar — these cycle
+ *  through the input as hints; the user types their own goal. */
+export const GOAL_PLACEHOLDERS: string[] = [
+  'Find a new job',
+  'Land my dream role',
+  'Build a specific project',
+  'Raise a seed round',
+  'Hire a founding engineer',
+  'Find a co-founder',
+  'Break into VC',
+  'Get my first customers',
 ];
 
 /** Colors cycled for manually-added orbs / avatars. */

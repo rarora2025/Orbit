@@ -116,10 +116,22 @@
 .orbit-onboard .chip.on .dot { transform: scale(1.25); }
 .orbit-onboard .chip .chk { width: 0; overflow: hidden; opacity: 0; transition: width .2s, opacity .2s; }
 .orbit-onboard .chip.on .chk { width: 15px; opacity: 1; }
-.orbit-onboard .add-goal { display: flex; align-items: center; gap: 9px; margin-top: 16px; }
-.orbit-onboard .add-goal .inp { height: 46px; padding-left: 16px; }
-.orbit-onboard .mini-btn { height: 44px; padding: 0 15px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); font-weight: 600; font-size: 13.5px; color: var(--dim); white-space: nowrap; transition: border-color .15s, color .15s, background .15s; }
+.orbit-onboard .add-goal { display: flex; align-items: center; gap: 9px; margin-top: 30px; }
+.orbit-onboard .add-goal .inp { height: 48px; padding-left: 16px; }
+.orbit-onboard .mini-btn { height: 48px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); font-weight: 600; font-size: 13.5px; color: var(--dim); white-space: nowrap; transition: border-color .15s, color .15s, background .15s; }
 .orbit-onboard .mini-btn:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+
+/* added goals — removable tags below the bar */
+.orbit-onboard .goal-list { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.orbit-onboard .goal-tag {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px;
+  border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent-text);
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 4px 14px oklch(0.7 0.18 45 / .12);
+  animation: ob-pop .4s var(--spring) both;
+}
+.orbit-onboard .goal-tag .gd { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.orbit-onboard .goal-tag .rm { display: grid; place-items: center; width: 20px; height: 20px; border: none; border-radius: 7px; background: transparent; color: var(--accent-text); opacity: .65; transition: opacity .15s, background .15s; }
+.orbit-onboard .goal-tag .rm:hover { opacity: 1; background: oklch(0.88 0.07 55); }
 
 /* ---------------- contact options ---------------- */
 .orbit-onboard .opts { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }

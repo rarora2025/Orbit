@@ -19,7 +19,6 @@ export interface OnboardingContactInput {
 
 export interface CompleteOnboardingInput {
   contacts: OnboardingContactInput[];
-  goals: string[];
 }
 
 async function requireUserId(): Promise<string> {
@@ -71,10 +70,10 @@ function buildContact(input: OnboardingContactInput, index: number): Contact {
 }
 
 /**
- * Persist everything chosen during onboarding in one shot: the imported /
- * manually-added people become real contacts, and each picked goal becomes a
- * Goal row. Safe to call once at the end of the flow. Returns nothing — the app
- * re-hydrates from the DB on landing.
+ * Persist the people chosen during onboarding: the imported / manually-added
+ * contacts become real Contact rows. Goals are created live as the user adds
+ * them (so each gets an AI photo, like elsewhere in the app), so they aren't
+ * handled here. Returns nothing — the app re-hydrates from the DB on landing.
  */
 export async function completeOnboarding(input: CompleteOnboardingInput): Promise<void> {
   const userId = await requireUserId();
@@ -89,18 +88,6 @@ export async function completeOnboarding(input: CompleteOnboardingInput): Promis
       data: { ...c, interactions: [] },
     }));
     const { error } = await supabaseAdmin.from('contacts').insert(rows);
-    if (error) throw error;
-  }
-
-  const titles = input.goals.map((t) => t.trim()).filter(Boolean);
-  if (titles.length > 0) {
-    const goalRows = titles.map((title) => ({
-      user_id: userId,
-      title,
-      image_url: null,
-      member_ids: [] as string[],
-    }));
-    const { error } = await supabaseAdmin.from('goals').insert(goalRows);
     if (error) throw error;
   }
 }
