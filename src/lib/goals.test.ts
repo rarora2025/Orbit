@@ -3,9 +3,9 @@ import { goalImagePrompt, toggleMember } from './goals';
 
 describe('goalImagePrompt', () => {
   it('embeds the title in a tasteful default style prompt', () => {
-    const p = goalImagePrompt('Break into VC');
-    expect(p).toContain('Break into VC');
-    expect(p.toLowerCase()).toContain('illustration');
+    expect(goalImagePrompt('Break into VC')).toBe(
+      '"Break into VC", minimal modern editorial illustration, soft warm palette, abstract, no text',
+    );
   });
 
   it('trims surrounding whitespace from the title', () => {
