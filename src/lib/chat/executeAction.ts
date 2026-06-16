@@ -20,7 +20,7 @@ const AVATAR_CLASSES = [
   'bg-emerald-500 text-white', 'bg-blue-500 text-white', 'bg-violet-500 text-white',
 ];
 
-function buildContact(args: { name: string; company?: string; role?: string; email?: string; linkedinUrl?: string; warmth?: Warmth }, index: number): Contact {
+function buildContact(args: { name: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth }, index: number): Contact {
   const now = new Date();
   return {
     id: crypto.randomUUID(),
@@ -30,6 +30,7 @@ function buildContact(args: { name: string; company?: string; role?: string; ema
     role: args.role ?? '',
     linkedinUrl: args.linkedinUrl ?? '',
     email: args.email ?? '',
+    phone: args.phone ?? '',
     notes: '',
     status: 'Send' as Status,
     score: args.warmth === 'High' ? 85 : args.warmth === 'Low' ? 45 : 62,

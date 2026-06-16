@@ -9,6 +9,7 @@ import { Contact, columnConfig } from '@/lib/mockData';
 import { Send, Star, Plus, MessageCircle, Trash2, Check, X } from 'lucide-react';
 import OrbitLogo from '@/components/OrbitLogo';
 import CompanyLogo from '@/components/CompanyLogo';
+import ChatMarkdown from '@/components/ChatMarkdown';
 import { CHAT_SUGGESTIONS as SUGGESTIONS } from '@/lib/chatSuggestions';
 import { describeAction, type ChatStreamEvent, type ProposedAction } from '@/lib/chat/tools';
 import { createNdjsonParser } from '@/lib/chat/ndjson';
@@ -151,7 +152,7 @@ function ChatInner() {
     addAssistantMessage(sessionId, {
       role: 'assistant',
       id: messageId,
-      text: text2 || '(no response)',
+      text: text2,
       ...(actions.length ? { actions } : {}),
     });
     setStream(null);
@@ -251,8 +252,7 @@ function ChatInner() {
               <div className="w-11 h-11 rounded-2xl bg-stone-100 flex items-center justify-center mb-4">
                 <OrbitLogo size={24} />
               </div>
-              <h2 className="text-[15px] font-semibold text-stone-800">Ask anything, or just tell me what happened</h2>
-              <p className="text-[13px] text-stone-400 mt-1 mb-5">I can map your network, draft outreach, and update people as you talk — I&apos;ll always confirm before changing anything.</p>
+              <h2 className="text-[15px] font-semibold text-stone-800 mb-5">Ask anything, or just tell me what happened</h2>
               <div className="flex flex-col gap-1.5 w-full">
                 {SUGGESTIONS.map(s => (
                   <button
@@ -356,9 +356,11 @@ function MessageRow({
         <OrbitLogo size={16} />
       </div>
       <div className="flex-1 min-w-0 space-y-2">
-        <div className="bg-stone-100 text-stone-700 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
-          {message.text}
-        </div>
+        {message.text.trim() && (
+          <div className="bg-stone-100 text-stone-700 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm">
+            <ChatMarkdown text={message.text} />
+          </div>
+        )}
         {message.contactIds && (
           <div className="space-y-1.5">
             {message.contactIds.map(id => byId.get(id)).filter(Boolean).map(c => (

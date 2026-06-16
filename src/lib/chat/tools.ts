@@ -3,7 +3,7 @@ import type { Status, Warmth } from '../mockData';
 // Every tool the model can call is a *proposal* — it never mutates data directly.
 // The client renders it as a confirm card; executeChatAction runs it on confirm.
 export type ProposedAction =
-  | { id: string; type: 'create_contact'; args: { name: string; company?: string; role?: string; email?: string; linkedinUrl?: string; warmth?: Warmth } }
+  | { id: string; type: 'create_contact'; args: { name: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth } }
   | { id: string; type: 'create_goal'; args: { title: string } }
   | { id: string; type: 'add_contact_to_goal'; args: { contactName: string; goalTitle: string } }
   | { id: string; type: 'set_status'; args: { contactName: string; status: Status } }
@@ -46,6 +46,7 @@ export const CHAT_TOOLS: ChatTool[] = [
           company: str('Company or organization'),
           role: str('Job title'),
           email: str('Email address'),
+          phone: str('Phone number'),
           linkedinUrl: str('LinkedIn profile URL'),
           warmth: { type: 'string', enum: ['Low', 'Medium', 'High'], description: 'Relationship temperature' },
         },
@@ -182,7 +183,7 @@ export function parseToolCall(name: string, argsJson: string): ProposedAction | 
       const nm = s('name');
       if (!nm) return null;
       const warmth = s('warmth');
-      return { id, type: 'create_contact', args: { name: nm, company: s('company'), role: s('role'), email: s('email'), linkedinUrl: s('linkedinUrl'), warmth: (warmth as Warmth) } };
+      return { id, type: 'create_contact', args: { name: nm, company: s('company'), role: s('role'), email: s('email'), phone: s('phone'), linkedinUrl: s('linkedinUrl'), warmth: (warmth as Warmth) } };
     }
     case 'create_goal': {
       const title = s('title');
