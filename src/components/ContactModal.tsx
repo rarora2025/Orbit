@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Contact, Warmth } from '@/lib/mockData';
 import { X } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
+import TemperatureInfo from './TemperatureInfo';
 
 interface Props {
   onClose: () => void;
@@ -136,7 +137,10 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
 
           {/* Temperature — segmented control */}
           <div>
-            <label className={labelClass}>Temperature</label>
+            <div className="flex items-center gap-1.5">
+              <label className={labelClass}>Temperature</label>
+              <TemperatureInfo />
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {warmths.map(w => {
                 const active = form.warmth === w;
@@ -173,20 +177,20 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
             </div>
             <div>
               <input
-                type="tel"
-                className={inputClass}
-                placeholder="Phone (optional)"
-                value={form.phone}
-                onChange={e => handleChange('phone', e.target.value)}
-              />
-            </div>
-            <div>
-              <input
                 type="url"
                 className={inputClass}
                 placeholder="LinkedIn URL"
                 value={form.linkedinUrl}
                 onChange={e => handleChange('linkedinUrl', e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                type="tel"
+                className={inputClass}
+                placeholder="Phone"
+                value={form.phone}
+                onChange={e => handleChange('phone', e.target.value)}
               />
             </div>
           </div>

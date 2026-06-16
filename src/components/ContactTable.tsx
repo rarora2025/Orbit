@@ -1,9 +1,9 @@
 'use client';
 
-import { Contact } from '@/lib/mockData';
+import { Contact, Status } from '@/lib/mockData';
 import { formatRelativeDate } from '@/lib/utils';
-import StatusPill from './StatusPill';
-import CompanyLogo from './CompanyLogo';
+import StatusMenu from './StatusMenu';
+import PersonAvatar from './PersonAvatar';
 import TemperatureStars from './TemperatureStars';
 import TemperatureInfo from './TemperatureInfo';
 import ContactDateBadge from './ContactDateBadge';
@@ -14,11 +14,12 @@ interface Props {
   contacts: Contact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onChangeStatus: (id: string, status: Status) => void;
 }
 
 const HEADERS = ['Person', 'Company / Role', 'Status', 'Temperature', 'Date', 'Reach out'];
 
-export default function ContactTable({ contacts, selectedId, onSelect }: Props) {
+export default function ContactTable({ contacts, selectedId, onSelect, onChangeStatus }: Props) {
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -58,7 +59,6 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
             {contacts.map((contact) => {
               const isSelected = selectedId === contact.id;
               const companyLabel = companyDisplayName(contact.company);
-              const companyInitial = (companyLabel || contact.name).charAt(0).toUpperCase();
 
               return (
                 <tr
@@ -72,9 +72,7 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                   <td className="px-4 py-3 relative">
                     {isSelected && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-400 rounded-r" />}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 flex items-center justify-center text-[13px] font-bold flex-shrink-0 transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-0.5">
-                        {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
+                      <PersonAvatar contact={contact} size={32} className="transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-0.5" />
                       <div className="min-w-0">
                         <p className="text-[15px] font-semibold text-stone-800 leading-tight truncate">
                           {contact.name}
@@ -83,29 +81,21 @@ export default function ContactTable({ contacts, selectedId, onSelect }: Props) 
                     </div>
                   </td>
 
-                  {/* Company / Role */}
+                  {/* Company / Role — logo now lives on the person avatar (Person column) */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      {contact.company && (
-                        <div className="w-7 h-7 rounded-md border border-stone-200 bg-white flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          <CompanyLogo
-                            company={contact.company}
-                            fallbackInitial={companyInitial}
-                            fallbackColor="text-stone-400"
-                            className="w-full h-full p-1"
-                          />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-stone-700 truncate">{companyLabel || '—'}</p>
-                        <p className="text-[13px] text-stone-400 truncate">{contact.role}</p>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium text-stone-700 truncate">{companyLabel || '—'}</p>
+                      <p className="text-[13px] text-stone-400 truncate">{contact.role}</p>
                     </div>
                   </td>
 
-                  {/* Status */}
+                  {/* Status — click to change (the menu stops propagation so it doesn't open the row) */}
                   <td className="px-4 py-3">
-                    <StatusPill status={contact.status} size="sm" />
+                    <StatusMenu
+                      status={contact.status}
+                      size="sm"
+                      onChange={(s) => onChangeStatus(contact.id, s)}
+                    />
                   </td>
 
                   {/* Temperature — same star gauge as the board */}

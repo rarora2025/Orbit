@@ -307,10 +307,11 @@ export async function setFollowUp(contactId: string, input: FollowUpInput): Prom
   });
 }
 
-/** Clear a contact's next-action date (the follow-up / send-by date). */
+/** Clear a contact's next-action date (the follow-up / send-by date). Clearing a
+ *  reminder is not a contact event, so it does not bump last activity. */
 export async function clearFollowUp(contactId: string): Promise<Contact> {
   const { userId, current } = await requireContact(contactId);
-  return persist(userId, contactId, { ...current, nextFollowUpAt: undefined });
+  return persist(userId, contactId, { ...current, nextFollowUpAt: undefined }, { touchActivity: false });
 }
 
 /**

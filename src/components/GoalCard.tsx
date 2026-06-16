@@ -2,6 +2,7 @@
 
 import type { Goal } from '@/lib/goals';
 import type { Contact } from '@/lib/mockData';
+import PersonAvatar from './PersonAvatar';
 
 interface Props {
   goal: Goal;
@@ -44,13 +45,7 @@ export default function GoalCard({ goal, members, generating, onClick }: Props) 
             <>
               <span className="flex -space-x-2">
                 {members.slice(0, 4).map((m) => (
-                  <span
-                    key={m.id}
-                    title={m.name}
-                    className={`w-6 h-6 rounded-full ring-2 ring-white flex items-center justify-center text-[11px] font-semibold ${m.avatarColor || 'bg-stone-200 text-stone-700'}`}
-                  >
-                    {initial(m.name)}
-                  </span>
+                  <PersonAvatar key={m.id} contact={m} size={24} title={m.name} className="ring-2 ring-white" />
                 ))}
               </span>
               {members.length > 4 && (
