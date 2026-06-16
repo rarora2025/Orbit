@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { X, Trash2, RefreshCw, Plus } from 'lucide-react';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { useCRMStore } from '@/lib/store';
+import PersonAvatar from './PersonAvatar';
 
 interface Props {
   goalId: string;
@@ -101,9 +102,7 @@ export default function GoalDetailModal({ goalId, onClose }: Props) {
               <div className="flex flex-wrap gap-2">
                 {members.map((m) => (
                   <span key={m.id} className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-stone-100 text-stone-700 text-[13px]">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold ${m.avatarColor || 'bg-stone-200 text-stone-700'}`}>
-                      {initial(m.name)}
-                    </span>
+                    <PersonAvatar contact={m} size={20} />
                     {m.name}
                     <button onClick={() => removeMember(goal.id, m.id)} aria-label={`Remove ${m.name}`} className="p-0.5 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600">
                       <X size={12} />
@@ -132,9 +131,7 @@ export default function GoalDetailModal({ goalId, onClose }: Props) {
                     onClick={() => { addMember(goal.id, c.id); setQuery(''); }}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-stone-50 text-left transition-colors"
                   >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold ${c.avatarColor || 'bg-stone-200 text-stone-700'}`}>
-                      {initial(c.name)}
-                    </span>
+                    <PersonAvatar contact={c} size={24} />
                     <span className="text-[13px] text-stone-700 flex-1 truncate">{c.name}{c.company ? <span className="text-stone-400"> · {c.company}</span> : null}</span>
                     <Plus size={14} className="text-stone-400" />
                   </button>
