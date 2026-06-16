@@ -2,12 +2,33 @@
 
 import { create } from 'zustand';
 import * as api from './chats.actions';
+import type { ProposedAction } from './chat/tools';
+
+/** A proposed action attached to an assistant message, with its confirm state. */
+export interface StoredAction {
+  action: ProposedAction;
+  summary: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'failed';
+  /** Receipt or error text shown once resolved. */
+  receipt?: string;
+  /** For draft_message: the generated draft, shown for Save / Mark sent. */
+  draft?: string;
+  draftContactId?: string;
+}
 
 // Messages store contact *ids* (not full objects) so they stay in sync with the
 // CRM store and survive serialization; the UI re-resolves them at render time.
 export type StoredMsg =
   | { role: 'user'; text: string }
-  | { role: 'assistant'; text: string; contactIds?: string[]; followups?: string[] };
+  | {
+      role: 'assistant';
+      text: string;
+      /** Stable id so action state can be updated after the message is stored. */
+      id?: string;
+      contactIds?: string[];
+      followups?: string[];
+      actions?: StoredAction[];
+    };
 
 export interface ChatSession {
   id: string;
@@ -26,6 +47,8 @@ interface ChatStore {
   /** Appends to the active session, creating one if needed. Returns its id. */
   addUserMessage: (text: string) => string;
   addAssistantMessage: (sessionId: string, msg: Extract<StoredMsg, { role: 'assistant' }>) => void;
+  /** Replace the actions on a stored assistant message (by its stable id). */
+  updateMessageActions: (sessionId: string, messageId: string, actions: StoredAction[]) => void;
 }
 
 export const useChatStore = create<ChatStore>()((set, get) => ({
@@ -71,5 +94,19 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       ),
     }));
     if (updated) void api.upsertSession(updated).catch(console.error);
+  },
+  updateMessageActions: (sessionId, messageId, actions) => {
+    const patchSession = (session: ChatSession): ChatSession => ({
+      ...session,
+      messages: session.messages.map((m) =>
+        m.role === 'assistant' && m.id === messageId ? { ...m, actions } : m,
+      ),
+      updatedAt: Date.now(),
+    });
+    const updated = get().sessions.find((x) => x.id === sessionId);
+    if (!updated) return;
+    const next = patchSession(updated);
+    set((s) => ({ sessions: s.sessions.map((x) => (x.id === sessionId ? next : x)) }));
+    void api.upsertSession(next).catch(console.error);
   },
 }));
