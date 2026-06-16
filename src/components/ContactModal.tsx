@@ -177,20 +177,20 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
             </div>
             <div>
               <input
-                type="tel"
-                className={inputClass}
-                placeholder="Phone (optional)"
-                value={form.phone}
-                onChange={e => handleChange('phone', e.target.value)}
-              />
-            </div>
-            <div>
-              <input
                 type="url"
                 className={inputClass}
                 placeholder="LinkedIn URL"
                 value={form.linkedinUrl}
                 onChange={e => handleChange('linkedinUrl', e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                type="tel"
+                className={inputClass}
+                placeholder="Phone"
+                value={form.phone}
+                onChange={e => handleChange('phone', e.target.value)}
               />
             </div>
           </div>
