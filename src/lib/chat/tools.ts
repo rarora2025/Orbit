@@ -16,6 +16,13 @@ export type ProposedAction =
 
 export type ActionType = ProposedAction['type'];
 
+/** Events streamed from /api/chat as newline-delimited JSON. */
+export type ChatStreamEvent =
+  | { type: 'text'; delta: string }
+  | { type: 'proposals'; proposals: ProposedAction[] }
+  | { type: 'error'; message: string }
+  | { type: 'done' };
+
 const STATUSES: Status[] = ['Send', 'Pending', 'Response', 'Ghosted', 'Meeting Scheduled', 'Met', 'Long-term'];
 
 interface ChatTool {
