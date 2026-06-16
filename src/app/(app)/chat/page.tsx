@@ -130,11 +130,12 @@ function ContactRef({ contact }: { contact: Contact }) {
 }
 
 export default function ChatPage() {
-  const { contacts } = useCRMStore();
+  const { contacts, loaded } = useCRMStore();
   const { sessions, activeId, newChat, selectChat, deleteChat, addUserMessage, addAssistantMessage } = useChatStore();
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const firstQuestionSent = useRef(false);
 
   const active = sessions.find(s => s.id === activeId) ?? null;
   const messages = active?.messages ?? [];
@@ -161,6 +162,19 @@ export default function ChatPage() {
       setThinking(false);
     }, 700);
   }
+
+  // A question chosen at the end of onboarding is stashed in sessionStorage and
+  // auto-sent here, once contacts have loaded so the first answer is grounded.
+  useEffect(() => {
+    if (!loaded || firstQuestionSent.current) return;
+    let q: string | null = null;
+    try { q = sessionStorage.getItem('orbit_onboarding_q'); } catch { /* ignore */ }
+    if (!q) return;
+    firstQuestionSent.current = true;
+    try { sessionStorage.removeItem('orbit_onboarding_q'); } catch { /* ignore */ }
+    send(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   const empty = messages.length === 0;
   const lastAssistant = !thinking && messages.length > 0 && messages[messages.length - 1].role === 'assistant'
