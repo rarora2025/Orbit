@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Contact, Interaction, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import MessageViewModal from './MessageViewModal';
+import { useGoalsStore } from '@/lib/goalsStore';
 import { formatDate } from '@/lib/utils';
 import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink } from 'lucide-react';
 
@@ -73,6 +74,9 @@ export default function ContactDetailPanel({
 
   // A timeline message opened in the read-only viewer, or null.
   const [viewMessage, setViewMessage] = useState<Interaction | null>(null);
+
+  // Goal membership is edited here (existing goals only — no free text).
+  const { goals, addMember, removeMember } = useGoalsStore();
 
   const open = !!contact;
   const c = contact ?? shown;
@@ -144,11 +148,32 @@ export default function ContactDetailPanel({
 
               {/* Body */}
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">
-                {/* Goals */}
+                {/* Goals — membership in existing goals (no free text) */}
                 <Section title="Goals">
-                  {c.goal
-                    ? <p className="text-sm text-stone-700 leading-relaxed">{c.goal}</p>
-                    : <p className="text-sm text-stone-400 italic">Not set — add what you want from this person.</p>}
+                  {goals.length === 0 ? (
+                    <p className="text-sm text-stone-400 italic">No goals yet — create one on the Insights page.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {goals.map((g) => {
+                        const active = g.memberIds.includes(c.id);
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => (active ? removeMember(g.id, c.id) : addMember(g.id, c.id))}
+                            aria-pressed={active}
+                            className={`px-2.5 py-1 rounded-full text-[13px] font-medium border transition-colors ${
+                              active
+                                ? 'bg-orange-500 border-orange-500 text-white'
+                                : 'bg-stone-50 border-stone-200 text-stone-600 hover:border-stone-300 hover:bg-stone-100'
+                            }`}
+                          >
+                            {g.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </Section>
 
                 {/* Contact info */}

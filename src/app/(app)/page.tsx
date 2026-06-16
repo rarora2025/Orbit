@@ -3,12 +3,16 @@
 import { useMemo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
+import { useGoalsStore } from '@/lib/goalsStore';
 import { buildNextMoves, dueSoonCutoff, NextMove, MoveKind } from '@/lib/nextMoves';
 import { buildUpcoming } from '@/lib/upcoming';
 import DraftModal from '@/components/DraftModal';
+import GoalCard from '@/components/GoalCard';
+import NewGoalModal from '@/components/NewGoalModal';
+import GoalDetailModal from '@/components/GoalDetailModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
 import LinkedInIcon from '@/components/LinkedInIcon';
-import { Check, X, Mail } from 'lucide-react';
+import { Check, X, Mail, Plus } from 'lucide-react';
 
 // Each move maps to a status; label + dot mirror the board's pill language
 // instead of a glyph tile, so the two views read the same.
@@ -47,8 +51,11 @@ function greeting(date: Date): string {
 export default function InsightsPage() {
   const { user } = useUser();
   const { contacts, loaded, saveDraft, markSent } = useCRMStore();
+  const { goals, loaded: goalsLoaded, addGoal } = useGoalsStore();
   const composer = useDraftComposer();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [creatingGoal, setCreatingGoal] = useState(false);
+  const [openGoalId, setOpenGoalId] = useState<string | null>(null);
 
   const now = new Date();
   const allMoves = useMemo(() => buildNextMoves(contacts, new Date()), [contacts]);
@@ -88,6 +95,35 @@ export default function InsightsPage() {
             {greeting(now)}, {firstName}
           </h1>
         </header>
+
+        {/* Goals — what you're pursuing, with the people tied to each */}
+        <div className="flex-shrink-0 px-7 pt-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <h2 className="text-sm font-semibold text-stone-700">Goals</h2>
+            {goalsLoaded && goals.length > 0 && (
+              <span className="text-[12px] font-semibold text-stone-500 bg-stone-100 rounded-full px-2 py-0.5">{goals.length}</span>
+            )}
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            {goals.map((goal) => (
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                members={contacts.filter((c) => goal.memberIds.includes(c.id))}
+                generating={!goal.imageUrl}
+                onClick={() => setOpenGoalId(goal.id)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setCreatingGoal(true)}
+              className="w-[220px] flex-shrink-0 h-[180px] rounded-2xl border-2 border-dashed border-stone-200 text-stone-400 hover:border-orange-300 hover:text-orange-500 transition flex flex-col items-center justify-center gap-2"
+            >
+              <Plus size={22} />
+              <span className="text-[13px] font-semibold">New goal</span>
+            </button>
+          </div>
+        </div>
 
         {/* Upcoming — date-sorted meetings + follow-ups from the interactions table */}
         {loaded && upcoming.length > 0 && (
@@ -172,6 +208,13 @@ export default function InsightsPage() {
           onMarkSent={(input) => markSent(composer.state!.contact.id, input)}
           onClose={composer.close}
         />
+      )}
+
+      {creatingGoal && (
+        <NewGoalModal onClose={() => setCreatingGoal(false)} onCreate={(title) => addGoal(title)} />
+      )}
+      {openGoalId && (
+        <GoalDetailModal goalId={openGoalId} onClose={() => setOpenGoalId(null)} />
       )}
     </>
   );
