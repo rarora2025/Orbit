@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import OrbitLogo from '@/components/OrbitLogo';
 import { completeOnboarding, type OnboardingContactInput } from '@/lib/onboarding.actions';
@@ -72,7 +72,7 @@ function OrbitVisual({
         <div className={'ov-track t-outer' + (outer.length ? ' lit' : '')} />
 
         {/* inner ring: goals */}
-        <div className="ring r-inner">
+        <div className="ov-ring r-inner">
           {goalNodes.map((g) => (
             <div className="node" key={g.key} style={{ left: g.x + '%', top: g.y + '%' }}>
               <div className="upright pop">
@@ -83,7 +83,7 @@ function OrbitVisual({
         </div>
 
         {/* mid ring contacts */}
-        <div className="ring r-mid">
+        <div className="ov-ring r-mid">
           {mid.map((c) => (
             <div className="node" key={c.name} style={{ left: c.x + '%', top: c.y + '%' }}>
               <div className="upright pop">
@@ -97,7 +97,7 @@ function OrbitVisual({
         </div>
 
         {/* outer ring contacts */}
-        <div className="ring r-outer">
+        <div className="ov-ring r-outer">
           {outer.map((c) => (
             <div className="node" key={c.name} style={{ left: c.x + '%', top: c.y + '%' }}>
               <div className="upright pop">
@@ -320,7 +320,19 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ---------------- PAGE ---------------- */
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="orbit-onboard" />}>
+      <OnboardingFlow />
+    </Suspense>
+  );
+}
+
+function OnboardingFlow() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Test mode (?test=1): walk the whole flow without persisting anything — used
+  // by the sidebar "Test onboarding" affordance. Lets already-onboarded users in.
+  const testMode = searchParams.get('test') === '1';
   const { user, isLoaded } = useUser();
 
   const [step, setStep] = useState(0);
@@ -334,15 +346,16 @@ export default function OnboardingPage() {
 
   const alreadyOnboarded = isLoaded && user?.unsafeMetadata?.onboarded === true;
 
-  // Bounce anyone who has already finished onboarding back to the app.
+  // Bounce anyone who has already finished onboarding back to the app — unless
+  // they're explicitly here to test the flow.
   useEffect(() => {
-    if (alreadyOnboarded) router.replace('/');
-  }, [alreadyOnboarded, router]);
+    if (alreadyOnboarded && !testMode) router.replace('/');
+  }, [alreadyOnboarded, testMode, router]);
 
   // Prefill identity from Clerk once it loads. Render-time derived-state pattern
   // (guarded by `prefilled`) — same approach as CompanyLogo — so we never call
   // setState inside an effect.
-  if (isLoaded && user && !prefilled && !alreadyOnboarded) {
+  if (isLoaded && user && !prefilled) {
     setPrefilled(true);
     setName(user.fullName || '');
     setEmail(user.primaryEmailAddress?.emailAddress ?? '');
@@ -369,6 +382,14 @@ export default function OnboardingPage() {
 
   async function finish(q: string) {
     setPhase('launch');
+
+    if (testMode) {
+      // Preview only — persist nothing, just show the launch beat and land in chat.
+      await delay(1400);
+      try { sessionStorage.setItem('orbit_onboarding_q', q); } catch { /* ignore */ }
+      router.replace('/chat');
+      return;
+    }
 
     const payloadContacts: OnboardingContactInput[] = contacts.map((c) =>
       c.seed
@@ -414,6 +435,7 @@ export default function OnboardingPage() {
         <div className="panel">
           <div className="phead">
             <span className="brand"><OrbitLogo size={26} className="logo" /> Orbit</span>
+            {testMode && <span className="test-badge">Test mode · nothing saved</span>}
             <span className="spacer" />
             {step === 1 && <button className="skip" onClick={next}>Skip for now</button>}
             {step === 2 && contacts.length === 0 && <button className="skip" onClick={next}>I&apos;ll do this later</button>}
