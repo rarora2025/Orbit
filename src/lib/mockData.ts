@@ -68,6 +68,18 @@ export const BOARD_STATUSES: Status[] = [
   'Send', 'Pending', 'Response', 'Ghosted', 'Meeting Scheduled', 'Met', 'Long-term',
 ];
 
+/** The destination status named in a status_changed interaction's content, or
+ *  null. Statuses are checked longest-name-first as a forward-compatible guard:
+ *  should a future status name ever be a substring of a longer one, the longer
+ *  name still wins. Handles existing phrasings like "Moved to Response",
+ *  "Marked as ghosted", and "Moved to long-term". */
+export function statusFromChange(content: string): Status | null {
+  const text = content.toLowerCase();
+  return [...BOARD_STATUSES]
+    .sort((a, b) => b.length - a.length)
+    .find((s) => text.includes(s.toLowerCase())) ?? null;
+}
+
 /**
  * How the board lays out statuses into columns. Some pipeline stages are
  * either/or branches (a contact is Response *or* Ghosted) or terminal states

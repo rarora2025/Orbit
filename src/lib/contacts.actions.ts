@@ -15,14 +15,16 @@ interface Row {
 
 function rowToContact(r: Row): Contact {
   // The full contact lives in `data`; id/position are authoritative columns.
-  // Back-compat: older rows stored `relationshipGoal`/`inquiry`/`priority`.
-  const { relationshipGoal, inquiry, priority, ...rest } = r.data as Contact & {
+  // `goal` is intentionally NOT read from the blob — it is derived from goal
+  // membership in listContacts (the single source of truth). Older rows stored
+  // `relationshipGoal`/`inquiry`/`priority`; all are discarded on next write.
+  const { relationshipGoal, inquiry, priority, goal, ...rest } = r.data as Contact & {
     relationshipGoal?: string;
     inquiry?: string;
     priority?: string;
   };
-  void inquiry; void priority; // intentionally dropped
-  return { ...rest, goal: rest.goal ?? relationshipGoal, id: r.id, position: r.position };
+  void inquiry; void priority; void relationshipGoal; void goal;
+  return { ...rest, id: r.id, position: r.position };
 }
 
 async function requireUserId(): Promise<string> {
@@ -40,10 +42,31 @@ export async function listContacts(): Promise<Contact[]> {
     .order('position', { ascending: true });
   if (error) throw error;
   const byContact = await listUserInteractions();
+
+  // Goal membership is the single source of truth for a contact's goal text.
+  // This is the one canonical contacts read — it's also used by the mutation
+  // helpers and the AI context, so they all see fresh, consistent goal text. The
+  // extra (small, indexed) goals query per call is an accepted cost at this scale.
+  // A goals-read failure is non-fatal: contacts must still load, so we log and
+  // fall back to no goal text rather than throwing.
+  const { data: goalRows, error: goalError } = await supabaseAdmin
+    .from('goals')
+    .select('title, member_ids')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (goalError) console.warn('Failed to load goal membership; contact.goal will be empty', goalError);
+  const titlesByContact = new Map<string, string[]>();
+  for (const row of (goalRows ?? []) as { title: string; member_ids: string[] }[]) {
+    for (const cid of Array.isArray(row.member_ids) ? row.member_ids : []) {
+      titlesByContact.set(cid, [...(titlesByContact.get(cid) ?? []), row.title]);
+    }
+  }
+
   return (data as Row[]).map((r) => {
     const contact = rowToContact(r);
-    // The interactions table is the source of truth; show newest first.
     contact.interactions = [...(byContact.get(r.id) ?? [])].reverse();
+    const titles = titlesByContact.get(r.id);
+    contact.goal = titles && titles.length > 0 ? titles.join(', ') : undefined;
     return contact;
   });
 }
@@ -70,7 +93,7 @@ export async function updateContact(id: string, updates: Partial<Contact>): Prom
   const merged: Contact = { ...current, ...updates, id, position: current.position };
   // Strip interactions from the blob (table is the source of truth) but keep
   // them on the returned contact so the store's timeline stays populated.
-  return persist(userId, id, merged);
+  return persist(userId, id, merged, { touchActivity: false });
 }
 
 export async function moveContact(id: string, toStatus: Status, beforeId: string | null): Promise<Contact> {
@@ -91,7 +114,7 @@ export async function moveContact(id: string, toStatus: Status, beforeId: string
     interactions = [...current.interactions, logged];
   }
 
-  const merged: Contact = { ...current, status: toStatus, position, interactions };
+  const merged: Contact = { ...current, status: toStatus, position, interactions, lastContacted: new Date().toISOString() };
   const { data, error } = await supabaseAdmin
     .from('contacts')
     // Strip interactions from the blob; the table is the source of truth.
@@ -130,9 +153,18 @@ async function requireContact(contactId: string): Promise<{ userId: string; curr
   return { userId, current };
 }
 
-/** Persist a contact's `data` blob (interactions are stored in their own table). */
-async function persist(userId: string, contactId: string, merged: Contact): Promise<Contact> {
-  const dataToStore: Contact = { ...merged, interactions: [] };
+/** Persist a contact's `data` blob (interactions are stored in their own table).
+ *  Every lifecycle write is "activity" and bumps `lastContacted`; only plain
+ *  detail edits opt out via `{ touchActivity: false }`. */
+async function persist(
+  userId: string,
+  contactId: string,
+  merged: Contact,
+  opts: { touchActivity?: boolean } = {},
+): Promise<Contact> {
+  const stamped: Contact =
+    opts.touchActivity === false ? merged : { ...merged, lastContacted: new Date().toISOString() };
+  const dataToStore: Contact = { ...stamped, interactions: [] };
   const { data, error } = await supabaseAdmin
     .from('contacts')
     .update({ data: dataToStore, updated_at: new Date().toISOString() })
@@ -141,8 +173,8 @@ async function persist(userId: string, contactId: string, merged: Contact): Prom
     .select('id, position, data')
     .single();
   if (error) throw error;
-  // Return the caller's `merged` (with its real interactions), not the stripped blob.
-  return { ...merged, id: contactId, position: (data as Row).position };
+  // Return the caller's `stamped` (with its real interactions), not the stripped blob.
+  return { ...stamped, id: contactId, position: (data as Row).position };
 }
 
 export interface ResponseInput {

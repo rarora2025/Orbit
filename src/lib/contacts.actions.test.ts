@@ -72,3 +72,78 @@ describe('listContacts interactions join', () => {
     expect(c1.interactions.some((i) => i.id === 'stale')).toBe(false); // blob copy ignored
   });
 });
+
+describe('listContacts goal derivation from membership', () => {
+  it('sets contact.goal to the joined titles of goals the contact belongs to', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    // 1) contacts read, 2) interactions read, 3) goals read — in call order.
+    order
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', goal: 'STALE', interactions: [] } },
+          { id: 'c2', position: 2000, data: { id: 'c2', status: 'Send', goal: 'ALSO STALE', interactions: [] } },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: [], error: null }) // interactions
+      .mockResolvedValueOnce({
+        // The goals read selects only title + member_ids.
+        data: [
+          { title: 'Recruiting', member_ids: ['c1'] },
+          { title: 'Fundraising', member_ids: ['c1'] },
+        ],
+        error: null,
+      });
+
+    const { listContacts } = await import('./contacts.actions');
+    const contacts = await listContacts();
+    expect(contacts.find((c) => c.id === 'c1')?.goal).toBe('Recruiting, Fundraising');
+    expect(contacts.find((c) => c.id === 'c2')?.goal).toBeUndefined(); // cleared despite stale blob value
+  });
+});
+
+describe('lastContacted "last activity" stamping', () => {
+  // Seed one existing contact for the read, then empty interactions + goals reads.
+  function seedContact(lastContacted: string) {
+    order
+      .mockResolvedValueOnce({
+        data: [{ id: 'c1', position: 1000, data: { id: 'c1', status: 'Send', lastContacted, interactions: [] } }],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: [], error: null }) // interactions
+      .mockResolvedValueOnce({ data: [], error: null }); // goals
+  }
+
+  // A chainable .update(...).eq().eq().select().single() that captures its payload.
+  function captureUpdate(returnPosition: number) {
+    return vi.fn().mockReturnValue({
+      eq: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: { id: 'c1', position: returnPosition, data: {} }, error: null }) }) }) }),
+    });
+  }
+
+  it('updateContact preserves the prior lastContacted (edits are not activity)', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    seedContact('2020-01-01');
+    const update = captureUpdate(1000);
+    from.mockReturnValue({ select, insert, delete: del, update });
+
+    const { updateContact } = await import('./contacts.actions');
+    await updateContact('c1', { name: 'New Name' });
+
+    expect(update.mock.calls[0][0].data.lastContacted).toBe('2020-01-01');
+  });
+
+  it('moveContact bumps lastContacted to now', async () => {
+    authMock.mockResolvedValue({ userId: 'user_123' });
+    seedContact('2020-01-01');
+    const update = captureUpdate(2000);
+    from.mockReturnValue({ select, insert, delete: del, update });
+
+    const { moveContact } = await import('./contacts.actions');
+    const before = Date.now();
+    await moveContact('c1', 'Pending', null);
+
+    const stored = update.mock.calls[0][0].data.lastContacted;
+    expect(new Date(stored).getTime()).toBeGreaterThanOrEqual(before);
+  });
+});

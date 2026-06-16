@@ -22,11 +22,6 @@ const avatarPalette = [
   'bg-emerald-200 text-emerald-900', 'bg-purple-200 text-purple-900', 'bg-rose-200 text-rose-900',
   'bg-amber-200 text-amber-900', 'bg-cyan-200 text-cyan-900', 'bg-violet-200 text-violet-900',
 ];
-// Common reasons to track someone — power the goals datalist.
-const GOAL_SUGGESTIONS = [
-  'DraftIQ advice', 'Internship help', 'Founder mentor', 'Investor',
-  'Professor / research', 'Customer discovery', 'Friend / classmate',
-];
 
 export default function ContactModal({ onClose, contact, onAdd, onSave }: Props) {
   const isEdit = !!contact;
@@ -34,7 +29,6 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
     name: contact?.name ?? '',
     role: contact?.role ?? '',
     company: contact?.company ?? '',
-    goal: contact?.goal ?? '',
     email: contact?.email ?? '',
     phone: contact?.phone ?? '',
     linkedinUrl: contact?.linkedinUrl ?? '',
@@ -56,7 +50,6 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
         name: form.name.trim(),
         role: form.role.trim(),
         company: form.company.trim(),
-        goal: form.goal.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
         linkedinUrl: form.linkedinUrl.trim(),
@@ -80,7 +73,6 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
       phone: form.phone.trim(),
       notes: '',
       status: 'Send', // new people enter at the top of the pipeline; drag to move
-      goal: form.goal.trim(),
       score: warmthScore[form.warmth],
       warmth: form.warmth,
       avatarColor: avatarPalette[Math.abs(nameHash) % avatarPalette.length],
@@ -165,21 +157,6 @@ export default function ContactModal({ onClose, contact, onAdd, onSave }: Props)
                 );
               })}
             </div>
-          </div>
-
-          {/* Goals */}
-          <div>
-            <label className={labelClass}>Goals</label>
-            <input
-              className={inputClass}
-              list="relationship-goals"
-              placeholder="Why do you care about this person?"
-              value={form.goal}
-              onChange={e => handleChange('goal', e.target.value)}
-            />
-            <datalist id="relationship-goals">
-              {GOAL_SUGGESTIONS.map(g => <option key={g} value={g} />)}
-            </datalist>
           </div>
 
           {/* Contact — points of contact, surfaced on cards and in next moves */}
