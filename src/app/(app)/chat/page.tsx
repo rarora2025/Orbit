@@ -7,7 +7,7 @@ import { useCRMStore } from '@/lib/store';
 import { useChatStore, type StoredAction, type StoredMsg } from '@/lib/chatStore';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { Contact, columnConfig } from '@/lib/mockData';
-import { Send, Star, Plus, MessageCircle, Trash2, Check, X } from 'lucide-react';
+import { Send, Star, Plus, MessageCircle, Trash2, Check, X, Menu } from 'lucide-react';
 import OrbitLogo from '@/components/OrbitLogo';
 import CompanyLogo from '@/components/CompanyLogo';
 import ChatMarkdown from '@/components/ChatMarkdown';
@@ -105,6 +105,8 @@ function ChatInner() {
   const [input, setInput] = useState('');
   // The in-flight assistant turn, held locally until the stream finishes.
   const [stream, setStream] = useState<{ text: string; proposals: ProposedAction[]; phase: 'thinking' | 'streaming' } | null>(null);
+  // History drawer is a slide-over on mobile; always visible on md+.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const active = sessions.find(s => s.id === activeId) ?? null;
@@ -205,12 +207,23 @@ function ChatInner() {
   }, [handoffQ]);
 
   return (
-    <div className="flex-1 flex min-h-0 rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
-      {/* History sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r border-stone-100 bg-stone-50/50">
+    <div className="relative flex-1 flex min-h-0 rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
+      {/* Mobile-only backdrop behind the history drawer. */}
+      <div
+        className={`md:hidden absolute inset-0 z-20 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${historyOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setHistoryOpen(false)}
+        aria-hidden
+      />
+
+      {/* History sidebar — a slide-over drawer on mobile, a static rail on md+. */}
+      <aside
+        className={`absolute md:static inset-y-0 left-0 z-30 md:z-auto w-56 flex-shrink-0 flex flex-col border-r border-stone-100 bg-stone-50 md:bg-stone-50/50 transition-transform duration-300 ease-out ${
+          historyOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <div className="p-3 flex-shrink-0">
           <button
-            onClick={newChat}
+            onClick={() => { newChat(); setHistoryOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-[13px] font-semibold hover:border-orange-300 hover:text-orange-600 transition active:scale-[0.98]"
           >
             <Plus size={15} />
@@ -226,7 +239,7 @@ function ChatInner() {
               return (
                 <div
                   key={s.id}
-                  onClick={() => selectChat(s.id)}
+                  onClick={() => { selectChat(s.id); setHistoryOpen(false); }}
                   className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
                     isActive ? 'bg-white shadow-sm border border-stone-200' : 'hover:bg-white/70'
                   }`}
@@ -249,7 +262,25 @@ function ChatInner() {
 
       {/* Conversation */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+        {/* Mobile header — opens the history drawer and starts a new chat. */}
+        <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-stone-100 flex-shrink-0">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            aria-label="Chat history"
+            className="p-2 -ml-1 rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-700 transition active:scale-95"
+          >
+            <Menu size={18} />
+          </button>
+          <span className="flex-1 min-w-0 truncate text-[13px] font-semibold text-stone-700">{active?.title ?? 'New chat'}</span>
+          <button
+            onClick={newChat}
+            aria-label="New chat"
+            className="p-2 -mr-1 rounded-lg text-stone-500 hover:bg-stone-100 hover:text-orange-600 transition active:scale-95"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6">
           {empty ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
               <div className="relative mb-4 chat-hero-logo">
@@ -312,7 +343,7 @@ function ChatInner() {
         </div>
 
         {/* Composer */}
-        <div className="flex-shrink-0 border-t border-stone-100 px-6 py-4">
+        <div className="flex-shrink-0 border-t border-stone-100 px-4 sm:px-6 py-4">
           <form
             onSubmit={e => { e.preventDefault(); send(input); }}
             className="max-w-2xl mx-auto flex items-center gap-2 bg-stone-50 border border-stone-200 rounded-full pl-4 pr-1.5 py-1.5 focus-within:border-orange-400 focus-within:ring-1 focus-within:ring-orange-400/20 transition-colors"

@@ -95,14 +95,14 @@ export default function InsightsPage() {
     <>
       <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
         {/* Header — kept compact so the moves sit near the top */}
-        <header className="flex-shrink-0 px-7 pt-5 pb-4 border-b border-stone-100">
+        <header className="flex-shrink-0 px-4 sm:px-7 pt-5 pb-4 border-b border-stone-100">
           <h1 className="text-lg font-bold text-stone-900 tracking-tight">
             {greeting(now)}, {firstName}
           </h1>
         </header>
 
         {/* Goals — what you're pursuing, with the people tied to each */}
-        <div className="flex-shrink-0 px-7 pt-5">
+        <div className="flex-shrink-0 px-4 sm:px-7 pt-5">
           <div className="flex items-center gap-2.5 mb-3">
             <h2 className="text-sm font-semibold text-stone-700">Goals</h2>
             {goalsLoaded && goals.length > 0 && (
@@ -132,7 +132,7 @@ export default function InsightsPage() {
 
         {/* Upcoming — date-sorted meetings + follow-ups from the interactions table */}
         {loaded && upcoming.length > 0 && (
-          <div className="flex-shrink-0 px-7 pt-5">
+          <div className="flex-shrink-0 px-4 sm:px-7 pt-5">
             <h2 className="text-sm font-semibold text-stone-700 mb-3">Upcoming</h2>
             <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
               {upcoming.map((item) => (
@@ -159,7 +159,7 @@ export default function InsightsPage() {
         )}
 
         {/* Your next moves */}
-        <div className="flex-1 min-h-0 flex flex-col px-7 py-5">
+        <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-7 py-5">
           <div className="flex items-center gap-2.5 mb-4 flex-shrink-0">
             <h2 className="text-sm font-semibold text-stone-700">Your next moves</h2>
             {loaded && moves.length > 0 && (

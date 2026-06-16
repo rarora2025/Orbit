@@ -23,7 +23,9 @@ export default function Sidebar() {
         <span className="text-sm font-semibold text-stone-800 tracking-tight">Orbit</span>
       </Link>
 
-      {/* Nav — absolutely centered in the bar */}
+      {/* Nav — absolutely centered in the bar. Labels collapse to icon-only on
+          small screens so the centered group never collides with the logo or
+          profile on a phone. */}
       <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
         {navItems.map(({ href, icon: Icon, label }) => {
           const active = pathname === href;
@@ -32,14 +34,15 @@ export default function Sidebar() {
               key={href}
               href={href}
               title={label}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150 ${
+              aria-label={label}
+              className={`flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150 ${
                 active
                   ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/30'
                   : 'text-stone-500 hover:text-orange-600 hover:bg-orange-50/70'
               }`}
             >
               <Icon size={14} className="flex-shrink-0" />
-              <span className="whitespace-nowrap">{label}</span>
+              <span className="hidden sm:inline whitespace-nowrap">{label}</span>
             </Link>
           );
         })}
