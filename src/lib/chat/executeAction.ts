@@ -31,7 +31,7 @@ function buildContact(args: { name: string; company?: string; role?: string; ema
     linkedinUrl: args.linkedinUrl ?? '',
     email: args.email ?? '',
     phone: args.phone ?? '',
-    notes: '',
+    context: '',
     status: 'Send' as Status,
     score: args.warmth === 'High' ? 85 : args.warmth === 'Low' ? 45 : 62,
     warmth: args.warmth ?? 'Medium',

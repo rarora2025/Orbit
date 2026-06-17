@@ -54,7 +54,7 @@ function buildContact(input: OnboardingContactInput, index: number): Contact {
     linkedinUrl: input.linkedinUrl ?? '',
     email: input.email ?? '',
     phone: input.phone ?? '',
-    notes: '',
+    context: '',
     status,
     score: 50,
     warmth: input.warmth ?? 'Medium',

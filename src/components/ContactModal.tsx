@@ -36,6 +36,7 @@ export default function ContactModal({ onClose, contact, prefill, onAdd, onSave 
     phone: contact?.phone ?? '',
     linkedinUrl: contact?.linkedinUrl ?? '',
     warmth: contact?.warmth ?? ('Medium' as Warmth),
+    context: contact?.context ?? '',
   });
 
   function handleChange(key: string, value: string) {
@@ -58,6 +59,7 @@ export default function ContactModal({ onClose, contact, prefill, onAdd, onSave 
         linkedinUrl: form.linkedinUrl.trim(),
         warmth: form.warmth,
         score: warmthScore[form.warmth],
+        context: form.context.trim(),
       });
       return;
     }
@@ -74,7 +76,7 @@ export default function ContactModal({ onClose, contact, prefill, onAdd, onSave 
       linkedinUrl: form.linkedinUrl.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      notes: '',
+      context: form.context.trim(),
       status: 'Send', // new people enter at the top of the pipeline; drag to move
       score: warmthScore[form.warmth],
       warmth: form.warmth,
@@ -195,6 +197,18 @@ export default function ContactModal({ onClose, contact, prefill, onAdd, onSave 
                 onChange={e => handleChange('phone', e.target.value)}
               />
             </div>
+          </div>
+
+          {/* Context — grounds AI drafts so messages aren't generic */}
+          <div className="space-y-1.5 pt-1">
+            <label className={labelClass} htmlFor="contact-context">Context</label>
+            <textarea
+              id="contact-context"
+              className={`${inputClass} min-h-[84px] resize-y`}
+              placeholder="Who they are, how you know them, what matters — used to make AI messages specific."
+              value={form.context}
+              onChange={e => handleChange('context', e.target.value)}
+            />
           </div>
         </form>
 

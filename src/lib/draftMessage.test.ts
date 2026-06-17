@@ -5,10 +5,10 @@ import type { Contact } from './mockData';
 function makeContact(over: Partial<Contact> = {}): Contact {
   return {
     id: 'a', position: 1000, name: 'Vinit Shah', company: 'Mojo', role: 'Founder',
-    linkedinUrl: '', email: '', notes: '', status: 'Send',
+    linkedinUrl: '', email: '', context: '', status: 'Send',
     score: 50, warmth: 'Medium', avatarColor: '', tags: [], lastContacted: '', nextAction: '',
     aiSummary: '', outreachAngle: '', suggestedMessage: '', interactions: [],
-    goal: 'learn about sports betting products', ...over,
+    ...over,
   };
 }
 
@@ -28,9 +28,13 @@ describe('generateDraftMessage', () => {
     const pro = generateDraftMessage(makeContact(), 'Professional', 'Email');
     expect(short).not.toBe(pro);
   });
-  it('incorporates the relationship goal when present', () => {
-    const msg = generateDraftMessage(makeContact({ goal: 'sports betting products' }), 'Casual', 'Email');
-    expect(msg).toContain('sports betting products');
+  it('incorporates the person context when present', () => {
+    const msg = generateDraftMessage(makeContact({ context: 'building a prediction market exchange' }), 'Casual', 'Email');
+    expect(msg).toContain('building a prediction market exchange');
+  });
+  it('never references the relationship goal', () => {
+    const msg = generateDraftMessage(makeContact({ goal: 'raise a seed round', context: '' }), 'Casual', 'Email');
+    expect(msg).not.toContain('raise a seed round');
   });
   it('falls back to a sensible greeting for an empty name', () => {
     expect(generateDraftMessage(makeContact({ name: '' }), 'Short', 'Text')).toContain('there');

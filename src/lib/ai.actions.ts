@@ -52,15 +52,19 @@ export async function generateDraft(
 
   const intent = KIND_INTENT[kind] ?? KIND_INTENT.message;
   const lastNote = contact.interactions.at(-1)?.content ?? '';
+  const context = contact.context?.trim();
   const userPrompt = [
     `Write ${intent} to ${contact.name}${contact.role ? `, ${contact.role}` : ''}${contact.company ? ` at ${contact.company}` : ''}.`,
     channel ? `It will be sent via ${channel}, so match that medium's length and formality.` : '',
     tone ? `Tone: ${tone}.` : '',
     myName ? `The message is from me, ${myName} — sign it off with my name.` : '',
-    contact.goal ? `My goal with this relationship: ${contact.goal}.` : '',
+    // Ground the message in what the user actually knows about this person.
+    context
+      ? `What I know about ${contact.name}: "${context}". Ground the message specifically in this — reference something concrete from it rather than writing something generic.`
+      : `I don't have specific notes on ${contact.name} yet, so keep it short and genuine and do NOT invent specifics about them or their work.`,
     contact.tags.length ? `Relevant context tags: ${contact.tags.join(', ')}.` : '',
     lastNote ? `Most recent interaction: "${lastNote}".` : '',
-    'Keep it under 120 words, natural and specific. Never use placeholders such as [Name], [Your name], or [Company]. Return only the message body.',
+    'Keep it under 120 words, natural and specific. Never reference my goals or agenda. Never use placeholders such as [Name], [Your name], or [Company]. Return only the message body.',
   ].filter(Boolean).join('\n');
 
   const res = await openai.chat.completions.create({

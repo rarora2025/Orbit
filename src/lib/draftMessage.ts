@@ -10,12 +10,11 @@ function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || 'there';
 }
 
-/** A specific, bracket-free reason to connect, drawn from the contact's fields. */
+/** A specific, bracket-free reason to connect, drawn from the contact's fields.
+ *  Goals are deliberately NOT used — messages should never reference them. */
 function reason(contact: Contact): string {
-  const goal = contact.goal?.trim();
-  const notes = contact.notes?.trim();
-  if (goal) return goal;
-  if (notes) return notes;
+  const context = contact.context?.trim();
+  if (context) return context;
   if (contact.role && contact.company) return `your work as ${contact.role} at ${contact.company}`;
   if (contact.company) return `your work at ${contact.company}`;
   if (contact.role) return `your work as ${contact.role}`;

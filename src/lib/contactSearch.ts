@@ -2,7 +2,7 @@ import type { Contact } from './mockData';
 
 // Fields a search query is matched against. Intentionally limited to the
 // identifying attributes you'd look someone up by — free-text fields like
-// `inquiry` / `notes` are out of scope (see the pipeline-search design doc).
+// `inquiry` / `context` are out of scope (see the pipeline-search design doc).
 function searchableText(contact: Contact): string {
   return [contact.name, contact.company, contact.role, ...contact.tags]
     .join(' ')

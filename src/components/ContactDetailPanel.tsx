@@ -163,6 +163,21 @@ export default function ContactDetailPanel({
 
               {/* Body */}
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">
+                {/* Context — who they are; grounds AI message drafts */}
+                <Section title="Context">
+                  {c.context?.trim() ? (
+                    <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{c.context}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(c.id)}
+                      className="text-sm text-stone-400 italic hover:text-orange-500 transition-colors text-left"
+                    >
+                      No context yet — add who they are so messages aren&apos;t generic.
+                    </button>
+                  )}
+                </Section>
+
                 {/* Goals — membership in existing goals (no free text) */}
                 <Section title="Goals">
                   {goals.length === 0 ? (

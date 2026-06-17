@@ -10,7 +10,7 @@ function makeContact(over: Partial<Contact> & { id: string; status: Status }): C
     role: '',
     linkedinUrl: '',
     email: '',
-    notes: '',
+    context: '',
     score: 50,
     warmth: 'Medium',
     avatarColor: '',

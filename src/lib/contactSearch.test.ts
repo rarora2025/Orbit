@@ -11,7 +11,7 @@ function makeContact(overrides: Partial<Contact>): Contact {
     role: 'Engineer',
     linkedinUrl: '',
     email: '',
-    notes: 'private notes',
+    context: 'private notes',
     status: 'Send',
     score: 50,
     warmth: 'Low',
