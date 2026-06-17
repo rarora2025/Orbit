@@ -5,6 +5,7 @@ import { useCRMStore } from '@/lib/store';
 import { BOARD_STATUSES, BOARD_COLUMNS } from '@/lib/mockData';
 import { nextContactAt } from '@/lib/upcoming';
 import KanbanColumn from '@/components/KanbanColumn';
+import ContactCard from '@/components/ContactCard';
 import ContactTable from '@/components/ContactTable';
 import ViewToggle, { DashboardView } from '@/components/ViewToggle';
 import ContactModal from '@/components/ContactModal';
@@ -15,11 +16,12 @@ import ScheduleMeetingModal from '@/components/ScheduleMeetingModal';
 import MarkMetModal from '@/components/MarkMetModal';
 import SetFollowUpModal from '@/components/SetFollowUpModal';
 import { useDraftComposer } from '@/components/useDraftComposer';
-import { Plus } from 'lucide-react';
+import { Plus, Archive } from 'lucide-react';
 
 export default function PipelinePage() {
   const {
     contacts, loaded, selectedContactId, selectContact, addContact, updateContact, moveContact, deleteContact,
+    archiveContact, unarchiveContact,
     saveDraft, markSent, logResponse, scheduleMeeting, markMet, moveToLongTerm, markGhosted, setFollowUp, clearFollowUp, setStatus,
   } = useCRMStore();
   const [showAdd, setShowAdd] = useState(false);
@@ -29,6 +31,7 @@ export default function PipelinePage() {
   const [metId, setMetId] = useState<string | null>(null);
   const [followUpId, setFollowUpId] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView>('board');
+  const [showArchived, setShowArchived] = useState(false);
   const composer = useDraftComposer();
 
   // Restore the last-used view after mount (kept out of initial render so the
@@ -53,9 +56,14 @@ export default function PipelinePage() {
   const metContact = contacts.find(c => c.id === metId) ?? null;
   const followUpContact = contacts.find(c => c.id === followUpId) ?? null;
 
+  // Archived people are hidden from the board + table, but kept everywhere else
+  // (Insights, chat, search). They surface here only via "Show archived".
+  const activeContacts = useMemo(() => contacts.filter(c => !c.archived), [contacts]);
+  const archivedContacts = useMemo(() => contacts.filter(c => c.archived), [contacts]);
+
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
-    for (const c of contacts) map[c.status]?.push(c);
+    for (const c of activeContacts) map[c.status]?.push(c);
     // Order each column by what's due soonest: contacts with a scheduled meeting
     // or follow-up first (earliest/overdue at top), the rest by board position.
     for (const s of BOARD_STATUSES) {
@@ -69,14 +77,14 @@ export default function PipelinePage() {
       });
     }
     return map;
-  }, [contacts]);
+  }, [activeContacts]);
 
   // Table is ordered by what's due soonest: contacts with a scheduled meeting or
   // follow-up come first (earliest date — and overdue — at the top); those with
   // nothing scheduled fall to the bottom in board order (column, then position).
   const sortedContacts = useMemo(() => {
     const order = Object.fromEntries(BOARD_STATUSES.map((s, i) => [s, i]));
-    return [...contacts].sort((a, b) => {
+    return [...activeContacts].sort((a, b) => {
       const da = nextContactAt(a);
       const db = nextContactAt(b);
       if (da && db) return da.localeCompare(db);
@@ -84,7 +92,7 @@ export default function PipelinePage() {
       if (db) return 1;
       return (order[a.status] - order[b.status]) || (a.position - b.position);
     });
-  }, [contacts]);
+  }, [activeContacts]);
 
   // Hold the board until the first server hydration lands, so a returning user
   // doesn't see a flash of empty columns before their contacts load.
@@ -104,11 +112,49 @@ export default function PipelinePage() {
       {/* Main column — a slim header with the view switch sits above whichever
           view is showing (board or table). */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <div className="flex-shrink-0 flex items-center justify-end pb-3">
-          <ViewToggle view={view} onChange={changeView} />
+        <div className="flex-shrink-0 flex items-center justify-end gap-2 pb-3">
+          {(archivedContacts.length > 0 || showArchived) && (
+            <button
+              type="button"
+              onClick={() => setShowArchived(v => !v)}
+              aria-pressed={showArchived}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold border transition active:scale-95 ${
+                showArchived
+                  ? 'bg-stone-800 border-stone-800 text-white'
+                  : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300 hover:text-stone-800'
+              }`}
+            >
+              <Archive size={14} />
+              {showArchived ? 'Back to board' : `Archived${archivedContacts.length ? ` · ${archivedContacts.length}` : ''}`}
+            </button>
+          )}
+          {!showArchived && <ViewToggle view={view} onChange={changeView} />}
         </div>
 
-        {view === 'board' ? (
+        {showArchived ? (
+          <div key="archived" className="animate-view-in flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 p-5">
+            {archivedContacts.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <Archive size={26} className="text-stone-300 mb-2" />
+                <p className="text-base font-semibold text-stone-700">No archived people</p>
+                <p className="text-sm text-stone-400 mt-1">Archive someone from the board to tuck them away here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {archivedContacts.map(c => (
+                  <ContactCard
+                    key={c.id}
+                    contact={c}
+                    onClick={() => selectContact(selectedContactId === c.id ? null : c.id)}
+                    isSelected={selectedContactId === c.id}
+                    onUnarchive={unarchiveContact}
+                    onDelete={deleteContact}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : view === 'board' ? (
           /* Board — columns flex to fill the width; opening the panel just shrinks
              them. Horizontal scroll only kicks in once columns hit their min width. */
           <div key="board" className="animate-view-in flex-1 min-h-0 flex flex-col overflow-hidden rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40">
@@ -126,6 +172,7 @@ export default function PipelinePage() {
                         onEdit={(id) => setEditingId(id)}
                         onMoveContact={(contactId, s, beforeId) => moveContact(contactId, s, beforeId)}
                         onDelete={deleteContact}
+                        onArchive={archiveContact}
                       />
                     ))}
                   </div>
@@ -160,6 +207,7 @@ export default function PipelinePage() {
         onMarkGhosted={(contact) => markGhosted(contact.id)}
         onSetFollowUp={(contact) => setFollowUpId(contact.id)}
         onChangeStatus={(id, s) => setStatus(id, s)}
+        onArchive={(contact, archived) => (archived ? archiveContact(contact.id) : unarchiveContact(contact.id))}
       />
 
       {/* Single unified add button */}

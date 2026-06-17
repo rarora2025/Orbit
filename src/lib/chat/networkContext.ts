@@ -21,6 +21,9 @@ function contactLine(c: Contact): string {
   if (c.goal) meta.push(`goal: ${c.goal}`);
   const last = shortDate(c.lastContacted);
   if (last) meta.push(`last activity ${last}`);
+  // Context lets the model ground messages and know when it should ask for more.
+  const ctx = c.context?.trim();
+  meta.push(ctx ? `context: ${ctx}` : 'no context yet');
   return `- ${parts.join(' — ')} · ${meta.join(' · ')}`;
 }
 

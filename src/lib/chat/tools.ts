@@ -5,6 +5,7 @@ import type { Status, Warmth } from '../mockData';
 export type ProposedAction =
   | { id: string; type: 'create_contact'; args: { name: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth } }
   | { id: string; type: 'update_contact'; args: { contactName: string; company?: string; role?: string; email?: string; phone?: string; linkedinUrl?: string; warmth?: Warmth } }
+  | { id: string; type: 'set_context'; args: { contactName: string; context: string } }
   | { id: string; type: 'create_goal'; args: { title: string } }
   | { id: string; type: 'add_contact_to_goal'; args: { contactName: string; goalTitle: string } }
   | { id: string; type: 'set_status'; args: { contactName: string; status: Status } }
@@ -72,6 +73,21 @@ export const CHAT_TOOLS: ChatTool[] = [
           warmth: { type: 'string', enum: ['Low', 'Medium', 'High'], description: 'Relationship temperature' },
         },
         required: ['contactName'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'set_context',
+      description: "Save context about who a person is — how the user knows them, what they're working on, what matters about the relationship. Use this whenever the user tells you something durable about a person. MERGE with their existing context (shown in the snapshot): fold the new detail into a single coherent paragraph and pass the full updated text, never just the new fragment.",
+      parameters: {
+        type: 'object',
+        properties: {
+          contactName: str('Existing person'),
+          context: str('The full, merged context paragraph for this person'),
+        },
+        required: ['contactName', 'context'],
       },
     },
   },
@@ -214,6 +230,10 @@ export function parseToolCall(name: string, argsJson: string): ProposedAction | 
       if (!Object.values(fields).some((v) => v !== undefined)) return null;
       return { id, type: 'update_contact', args: { contactName: c, ...fields } };
     }
+    case 'set_context': {
+      const c = s('contactName'); const context = s('context');
+      return c && context ? { id, type: 'set_context', args: { contactName: c, context } } : null;
+    }
     case 'create_goal': {
       const title = s('title');
       return title ? { id, type: 'create_goal', args: { title } } : null;
@@ -269,6 +289,7 @@ export function describeAction(a: ProposedAction): string {
       if (a.args.warmth) f.push('temperature');
       return `Update ${a.args.contactName}${f.length ? ` · ${f.join(', ')}` : ''}`;
     }
+    case 'set_context': return `Save context for ${a.args.contactName}`;
     case 'create_goal': return `Create goal “${a.args.title}”`;
     case 'add_contact_to_goal': return `Add ${a.args.contactName} to goal “${a.args.goalTitle}”`;
     case 'set_status': return `Move ${a.args.contactName} → ${a.args.status}`;

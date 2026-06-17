@@ -7,7 +7,7 @@ import CompanyLogo from './CompanyLogo';
 import TemperatureStars from './TemperatureStars';
 import ContactDateBadge from './ContactDateBadge';
 import ContactLinks from './ContactLinks';
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Pencil, Archive, ArchiveRestore } from 'lucide-react';
 
 interface Props {
   contact: Contact;
@@ -15,12 +15,14 @@ interface Props {
   isSelected?: boolean;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
+  onUnarchive?: (id: string) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
 }
 
-export default function ContactCard({ contact, onClick, isSelected, onEdit, onDelete, draggable, onDragStart, onDragEnd }: Props) {
+export default function ContactCard({ contact, onClick, isSelected, onEdit, onDelete, onArchive, onUnarchive, draggable, onDragStart, onDragEnd }: Props) {
   const [dragging, setDragging] = useState(false);
   const initial = (contact.company || contact.name || '?').charAt(0).toUpperCase();
   const subtitle = [contact.role, contact.company].filter(Boolean).join(' · ');
@@ -83,6 +85,28 @@ export default function ContactCard({ contact, onClick, isSelected, onEdit, onDe
             className="flex-shrink-0 p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-orange-50 hover:text-orange-500 transition-all"
           >
             <Pencil size={14} />
+          </button>
+        )}
+        {onArchive && (
+          <button
+            type="button"
+            aria-label={`Archive ${contact.name}`}
+            title="Archive"
+            onClick={(e) => { e.stopPropagation(); onArchive(contact.id); }}
+            className="flex-shrink-0 p-1 rounded-lg text-stone-300 opacity-0 group-hover:opacity-100 hover:bg-amber-50 hover:text-amber-600 transition-all"
+          >
+            <Archive size={14} />
+          </button>
+        )}
+        {onUnarchive && (
+          <button
+            type="button"
+            aria-label={`Unarchive ${contact.name}`}
+            title="Unarchive"
+            onClick={(e) => { e.stopPropagation(); onUnarchive(contact.id); }}
+            className="flex-shrink-0 p-1 rounded-lg text-stone-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+          >
+            <ArchiveRestore size={14} />
           </button>
         )}
         {onDelete && (

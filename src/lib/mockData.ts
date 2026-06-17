@@ -48,6 +48,8 @@ export interface Contact {
   nextFollowUpAt?: string;
   nextAction: string;
   actionNote?: string;
+  /** Hidden from the dashboard board + table when true (kept everywhere else). */
+  archived?: boolean;
   aiSummary: string;
   outreachAngle: string;
   suggestedMessage: string;

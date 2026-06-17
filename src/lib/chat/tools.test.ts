@@ -31,6 +31,13 @@ describe('parseToolCall', () => {
     expect(describeAction(a!)).toBe('Update Harry · LinkedIn');
   });
 
+  it('round-trips set_context and needs both fields', () => {
+    expect(parseToolCall('set_context', JSON.stringify({ contactName: 'Shayne' }))).toBeNull();
+    const a = parseToolCall('set_context', JSON.stringify({ contactName: 'Shayne', context: 'Founder of Polymarket; met at a meetup.' }))!;
+    expect(a).toMatchObject({ type: 'set_context', args: { contactName: 'Shayne', context: 'Founder of Polymarket; met at a meetup.' } });
+    expect(describeAction(a)).toBe('Save context for Shayne');
+  });
+
   it('validates enum status', () => {
     expect(parseToolCall('set_status', JSON.stringify({ contactName: 'X', status: 'Bogus' }))).toBeNull();
     expect(parseToolCall('set_status', JSON.stringify({ contactName: 'X', status: 'Met' }))).toMatchObject({ type: 'set_status', args: { status: 'Met' } });
