@@ -69,9 +69,10 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
   const isDragOver = dropIndex !== null;
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      {/* Header — a tinted pill so it reads clearly as a section, not a card */}
-      <div className="flex-shrink-0 pt-4 pb-3">
+    <div className="flex flex-col">
+      {/* Header — a tinted pill so it reads clearly as a section, not a card.
+          Sticks to the top while scrolling so you always know which column you're in. */}
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-white pt-4 pb-3">
         <div className={`inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-full ${config.bg}`}>
           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
           <span className={`text-[13px] font-semibold ${config.text}`}>{status}</span>
@@ -86,7 +87,7 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
         onDragOver={handleContainerDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2 pb-6 pr-0.5 rounded-xl transition-colors ${
+        className={`space-y-2 pb-6 pr-0.5 rounded-xl transition-colors ${
           isDragOver ? 'bg-orange-50/50' : ''
         }`}
       >

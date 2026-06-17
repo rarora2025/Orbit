@@ -8,6 +8,8 @@ import { completeOnboarding, type OnboardingContactInput } from '@/lib/onboardin
 import { addGoal as createGoal, generateGoalImage, deleteGoal as removeGoalApi } from '@/lib/goals.actions';
 import { companyLogoUrl } from '@/lib/companyLogo';
 import { GOAL_PLACEHOLDERS, ORB_COLORS, initials } from '@/lib/onboardingSamples';
+import { parseContactsWithAI } from '@/lib/import.actions';
+import type { ImportRow } from '@/lib/import';
 
 const STEP_COUNT = 3;
 
@@ -17,36 +19,16 @@ type Person = {
   company: string;
   email?: string;
   phone?: string;
+  role?: ImportRow['role'];
+  status?: ImportRow['status'];
+  warmth?: ImportRow['warmth'];
+  tags?: ImportRow['tags'];
   /** Live company logo URL (favicon) for the orb badge, or null. */
   logo: string | null;
   color: string;
 };
 // `id` is set once the goal is created for real (so it can be deleted again).
 type GoalPick = { label: string; cl: string; id?: string };
-
-// One parsed import row.
-type ImportRow = { name: string; company?: string; email?: string; phone?: string };
-
-/** Parse pasted/CSV contact lines: "Name, Company, email, phone" in any order
- *  after the name. Classifies fields heuristically; drops a header row. */
-function parseContactLines(text: string): ImportRow[] {
-  return text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split(/[\t,;]/).map((p) => p.trim()).filter(Boolean);
-      const name = parts[0] ?? '';
-      const row: ImportRow = { name };
-      for (const p of parts.slice(1)) {
-        if (p.includes('@')) row.email = p;
-        else if (/^[+\d()\-.\s]{6,}$/.test(p)) row.phone = p;
-        else if (!row.company) row.company = p;
-      }
-      return row;
-    })
-    .filter((r) => r.name && !/^(name|full name)$/i.test(r.name));
-}
 
 // Ambient floating dots — fixed positions (kept static so render stays pure).
 const AMB = [
@@ -209,18 +191,31 @@ function StepContacts({ contacts, addPeople, addManual }: { contacts: Person[]; 
   const [paste, setPaste] = useState('');
   const [mName, setMName] = useState('');
   const [mCo, setMCo] = useState('');
+  // True while the pasted/uploaded text is being read by the AI parser.
+  const [parsing, setParsing] = useState(false);
 
   const doManual = () => {
     if (mName.trim()) { addManual(mName.trim(), mCo.trim()); setMName(''); setMCo(''); }
   };
-  const doPaste = () => {
-    const rows = parseContactLines(paste);
-    if (rows.length) { addPeople(rows); setPaste(''); }
+  // Always route imports through the AI parser so any pasted format works; it
+  // falls back to a heuristic on the server if the key is missing or errors.
+  const ingest = async (text: string, clearPaste: boolean) => {
+    if (!text.trim() || parsing) return;
+    setParsing(true);
+    try {
+      const rows = await parseContactsWithAI(text);
+      if (rows.length) { addPeople(rows); if (clearPaste) setPaste(''); }
+    } catch (e) {
+      console.error('Import failed', e);
+    } finally {
+      setParsing(false);
+    }
   };
+  const doPaste = () => { void ingest(paste, true); };
   const onFile = (file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { const rows = parseContactLines(String(reader.result ?? '')); if (rows.length) addPeople(rows); };
+    reader.onload = () => { void ingest(String(reader.result ?? ''), false); };
     reader.readAsText(file);
   };
 
@@ -257,19 +252,22 @@ function StepContacts({ contacts, addPeople, addManual }: { contacts: Person[]; 
 
       {mode === 'import' && (
         <div className="manual">
-          <label className="import-drop">
-            <input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+          <label className="import-drop" aria-disabled={parsing}>
+            <input type="file" accept=".csv,text/csv,text/plain" hidden disabled={parsing} onChange={(e) => onFile(e.target.files?.[0])} />
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 8l5-5 5 5" /><path d="M4 21h16" /></svg>
             Upload a CSV
           </label>
           <textarea
             className="inp import-paste"
-            placeholder={'Or paste one person per line:\nJane Chen, Acme, jane@acme.com, 202 555 0198'}
+            placeholder={'Paste your contacts in any format — a CSV, a list, even an email signature:\nJane Chen — Acme (jane@acme.com)\nBob Lee, Initech, 202 555 0198'}
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
+            disabled={parsing}
           />
           <div className="row">
-            <button className="mini-btn" onClick={doPaste} disabled={!paste.trim()}>Add pasted</button>
+            <button className="mini-btn" onClick={doPaste} disabled={!paste.trim() || parsing}>
+              {parsing ? 'Reading your list…' : 'Add pasted'}
+            </button>
             <button className="skip" style={{ marginLeft: 'auto' }} onClick={() => setMode(null)}>← Back</button>
           </div>
         </div>
@@ -368,6 +366,10 @@ function OnboardingFlow() {
     company: row.company || '—',
     email: row.email,
     phone: row.phone,
+    role: row.role,
+    status: row.status,
+    warmth: row.warmth,
+    tags: row.tags,
     logo: row.company ? companyLogoUrl(row.company) : null,
     color: ORB_COLORS[idx % ORB_COLORS.length],
   });
@@ -393,6 +395,10 @@ function OnboardingFlow() {
       company: c.company === '—' ? '' : c.company,
       email: c.email,
       phone: c.phone,
+      role: c.role,
+      status: c.status,
+      warmth: c.warmth,
+      tags: c.tags,
     }));
     try {
       await Promise.all([completeOnboarding({ contacts: payloadContacts }), delay(1500)]);

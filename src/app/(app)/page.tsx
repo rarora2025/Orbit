@@ -105,6 +105,7 @@ export default function InsightsPage() {
         <div className="flex-shrink-0 px-4 sm:px-7 pt-5">
           <div className="flex items-center gap-2.5 mb-3">
             <h2 className="text-sm font-semibold text-stone-700">Goals</h2>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0.5 leading-none">Beta</span>
             {goalsLoaded && goals.length > 0 && (
               <span className="text-[12px] font-semibold text-stone-500 bg-stone-100 rounded-full px-2 py-0.5">{goals.length}</span>
             )}

@@ -222,6 +222,10 @@ function ChatInner() {
         }`}
       >
         <div className="p-3 flex-shrink-0">
+          <div className="flex items-center gap-2 px-1 pb-2.5">
+            <span className="text-[12px] font-semibold text-stone-600">Chat</span>
+            <span className="text-[9px] font-bold uppercase tracking-wide text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0.5 leading-none">Beta</span>
+          </div>
           <button
             onClick={() => { newChat(); setHistoryOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-[13px] font-semibold hover:border-orange-300 hover:text-orange-600 transition active:scale-[0.98]"
@@ -289,7 +293,10 @@ function ChatInner() {
                   <OrbitLogo size={26} />
                 </div>
               </div>
-              <h2 className="text-[15px] font-semibold text-stone-800 mb-5 chat-hero-title">Jump in, {firstName}</h2>
+              <h2 className="flex items-center justify-center gap-2 text-[15px] font-semibold text-stone-800 mb-5 chat-hero-title">
+                Jump in, {firstName}
+                <span className="text-[10px] font-bold uppercase tracking-wide text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0.5 leading-none">Beta</span>
+              </h2>
               <div className="flex flex-col gap-1.5 w-full">
                 {SUGGESTIONS.map((s, i) => (
                   <button

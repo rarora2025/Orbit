@@ -56,6 +56,18 @@ export default function PipelinePage() {
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(BOARD_STATUSES.map(s => [s, [] as typeof contacts])) as Record<string, typeof contacts>;
     for (const c of contacts) map[c.status]?.push(c);
+    // Order each column by what's due soonest: contacts with a scheduled meeting
+    // or follow-up first (earliest/overdue at top), the rest by board position.
+    for (const s of BOARD_STATUSES) {
+      map[s].sort((a, b) => {
+        const da = nextContactAt(a);
+        const db = nextContactAt(b);
+        if (da && db) return da.localeCompare(db);
+        if (da) return -1;
+        if (db) return 1;
+        return a.position - b.position;
+      });
+    }
     return map;
   }, [contacts]);
 
@@ -100,10 +112,10 @@ export default function PipelinePage() {
           /* Board — columns flex to fill the width; opening the panel just shrinks
              them. Horizontal scroll only kicks in once columns hit their min width. */
           <div key="board" className="animate-view-in flex-1 min-h-0 flex flex-col overflow-hidden rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40">
-            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-contain">
-              <div className="flex h-full min-w-full divide-x divide-stone-200/70">
+            <div className="flex-1 min-h-0 overflow-auto overscroll-contain">
+              <div className="flex min-h-full min-w-full divide-x divide-stone-200/70 items-stretch">
                 {BOARD_COLUMNS.map(group => (
-                  <div key={group.key} className="flex-1 min-w-[208px] flex flex-col min-h-0 px-3 divide-y divide-stone-200/60">
+                  <div key={group.key} className="flex-1 min-w-[208px] flex flex-col px-3 divide-y divide-stone-200/60">
                     {group.statuses.map(status => (
                       <KanbanColumn
                         key={status}
