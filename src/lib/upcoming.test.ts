@@ -27,10 +27,17 @@ describe('contactDateBadge', () => {
     expect(badge.label).toMatch(/^Meeting /);
   });
 
-  it('flags an overdue follow-up', () => {
+  it('flags an overdue follow-up as "Overdue (date)"', () => {
     const c = makeContact({ id: 'a', status: 'Pending', nextFollowUpAt: '2026-06-01T12:00:00Z' });
     const badge = contactDateBadge(c, today)!;
-    expect(badge).toMatchObject({ kind: 'follow-up', overdue: true, label: 'Follow-up overdue' });
+    expect(badge).toMatchObject({ kind: 'follow-up', overdue: true });
+    expect(badge.label).toMatch(/^Overdue \(/);
+  });
+
+  it('uses the same "Overdue (date)" label for an overdue Send', () => {
+    const c = makeContact({ id: 'a', status: 'Send', nextFollowUpAt: '2026-06-01T12:00:00Z' });
+    const badge = contactDateBadge(c, today)!;
+    expect(badge.label).toMatch(/^Overdue \(/);
   });
 
   it('shows a plain date for a future follow-up', () => {

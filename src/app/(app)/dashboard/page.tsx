@@ -6,6 +6,7 @@ import { BOARD_STATUSES, BOARD_COLUMNS } from '@/lib/mockData';
 import { nextContactAt } from '@/lib/upcoming';
 import KanbanColumn from '@/components/KanbanColumn';
 import ContactCard from '@/components/ContactCard';
+import ContactSearch from '@/components/ContactSearch';
 import ContactTable from '@/components/ContactTable';
 import ViewToggle, { DashboardView } from '@/components/ViewToggle';
 import ContactModal from '@/components/ContactModal';
@@ -112,7 +113,12 @@ export default function PipelinePage() {
       {/* Main column — a slim header with the view switch sits above whichever
           view is showing (board or table). */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <div className="flex-shrink-0 flex items-center justify-end gap-2 pb-3">
+        <div className="flex-shrink-0 flex items-center gap-2 pb-3">
+          <ContactSearch
+            contacts={contacts}
+            onSelect={(id) => { setShowArchived(false); selectContact(id); }}
+          />
+          <div className="flex-1" />
           {(archivedContacts.length > 0 || showArchived) && (
             <button
               type="button"

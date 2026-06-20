@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Contact, Interaction, Status, columnConfig, getNextAction, followUpLabel, INTERACTION_LABEL, statusFromChange } from '@/lib/mockData';
 import CompanyLogo from './CompanyLogo';
 import MessageViewModal from './MessageViewModal';
@@ -85,6 +85,35 @@ export default function ContactDetailPanel({
 
   const open = !!contact;
   const c = contact ?? shown;
+
+  // Desktop panel width, drag-resizable via the left-edge handle. Resets to the
+  // default on reload (intentionally not persisted).
+  const [panelWidth, setPanelWidth] = useState(384);
+  const draggingRef = useRef(false);
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!draggingRef.current) return;
+      setPanelWidth(Math.min(720, Math.max(320, window.innerWidth - e.clientX)));
+    };
+    const onUp = () => {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
   const cfg = c ? columnConfig[c.status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' } : null;
   const temp = c ? TEMP_LEVEL[c.warmth] ?? 1 : 0;
   const timeline = c ? [...c.interactions].sort((a, b) => b.date.localeCompare(a.date)) : [];
@@ -102,15 +131,28 @@ export default function ContactDetailPanel({
         board). md and up: an in-flow column that animates its width to push the
         board over, exactly as before. */}
     <div
+      style={{ ['--panel-w' as string]: `${panelWidth}px` }}
       className={[
         'fixed top-[4.75rem] right-0 bottom-0 z-50 w-full max-w-[420px] transition-transform duration-300 ease-out',
         open ? 'translate-x-0' : 'translate-x-full',
-        'md:static md:z-auto md:max-w-none md:translate-x-0 md:flex-shrink-0 md:overflow-hidden md:transition-[width]',
-        open ? 'md:w-[384px]' : 'md:w-0',
+        'md:relative md:z-auto md:max-w-none md:translate-x-0 md:flex-shrink-0 md:overflow-hidden md:transition-[width]',
+        open ? 'md:w-[var(--panel-w)]' : 'md:w-0',
       ].join(' ')}
       aria-hidden={!open}
     >
-      <div className="w-full md:w-[384px] h-full p-3 md:p-0 md:pl-3">
+      {/* Drag handle to resize the panel (desktop only). */}
+      {open && (
+        <div
+          onPointerDown={startResize}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize panel"
+          className="hidden md:block absolute left-0 top-0 bottom-0 z-10 w-2 cursor-col-resize group/resize"
+        >
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-stone-200 group-hover/resize:bg-orange-400 group-active/resize:bg-orange-400 transition-colors" />
+        </div>
+      )}
+      <div className="w-full md:w-[var(--panel-w)] h-full p-3 md:p-0 md:pl-3">
         <div className="h-full flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
           {c && cfg && (
             <>
