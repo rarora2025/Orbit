@@ -9,7 +9,8 @@ function meetingShort(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 function dateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  // Numeric M/D (e.g. "6/16") for follow-up / overdue / upcoming dates.
+  return new Date(iso).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
 }
 
 /**
@@ -47,9 +48,10 @@ export function contactDateBadge(c: Contact, now: Date = new Date()): DateBadge 
   if (c.nextFollowUpAt) {
     const overdue = new Date(c.nextFollowUpAt).getTime() < startOfDay(now);
     // A Send contact's date is a "send by", everyone else's is a "follow up".
+    // Overdue reads the same for both: "Overdue (Jun 14)".
     const verb = c.status === 'Send' ? 'Send' : 'Follow up';
     const label = overdue
-      ? (c.status === 'Send' ? 'Overdue to send' : 'Follow-up overdue')
+      ? `Overdue (${dateShort(c.nextFollowUpAt)})`
       : `${verb} ${dateShort(c.nextFollowUpAt)}`;
     return { kind: 'follow-up', overdue, label };
   }
@@ -90,7 +92,7 @@ export function buildUpcoming(contacts: Contact[], now: Date = new Date()): Upco
       items.push({
         contactId: c.id, contactName: c.name, kind: 'follow-up', tag: isSend ? 'Send' : 'Follow-up',
         at: c.nextFollowUpAt, overdue, label: `${verb} — ${c.name}`,
-        when: overdue ? 'Overdue' : dateShort(c.nextFollowUpAt),
+        when: overdue ? `Overdue (${dateShort(c.nextFollowUpAt)})` : dateShort(c.nextFollowUpAt),
       });
     }
   }
