@@ -8,7 +8,7 @@ import TemperatureInfo from './TemperatureInfo';
 import StatusMenu from './StatusMenu';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { formatDate } from '@/lib/utils';
-import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink } from 'lucide-react';
+import { X, Pencil, Star, Mail, Phone, Link2, ExternalLink, Archive, ArchiveRestore } from 'lucide-react';
 
 interface Props {
   /** The selected contact, or null when the panel is closed. */
@@ -23,6 +23,8 @@ interface Props {
   onMarkGhosted: (contact: Contact) => void;
   onSetFollowUp: (contact: Contact) => void;
   onChangeStatus: (id: string, status: Status) => void;
+  /** Archive (archived=true) or unarchive (false) the person. */
+  onArchive?: (contact: Contact, archived: boolean) => void;
 }
 
 /** Interactions whose text can be opened in a read-only popup. */
@@ -67,7 +69,7 @@ function timelineDetail(it: Interaction): { text: string; className: string } | 
 
 export default function ContactDetailPanel({
   contact, onClose, onEdit, onDraft, onLogResponse,
-  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted, onSetFollowUp, onChangeStatus,
+  onScheduleMeeting, onMarkMet, onMoveToLongTerm, onMarkGhosted, onSetFollowUp, onChangeStatus, onArchive,
 }: Props) {
   // Hold the last contact while the panel slides closed so content doesn't
   // vanish mid-animation. Adjusting state during render (not in an effect) is
@@ -138,6 +140,17 @@ export default function ContactDetailPanel({
                     >
                       <Pencil size={16} />
                     </button>
+                    {onArchive && (
+                      <button
+                        type="button"
+                        onClick={() => (c.archived ? onArchive(c, false) : onArchive(c, true))}
+                        aria-label={c.archived ? `Unarchive ${c.name}` : `Archive ${c.name}`}
+                        title={c.archived ? 'Unarchive' : 'Archive'}
+                        className="p-1.5 rounded-lg text-stone-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                      >
+                        {c.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={onClose}
@@ -163,6 +176,21 @@ export default function ContactDetailPanel({
 
               {/* Body */}
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">
+                {/* Context — who they are; grounds AI message drafts */}
+                <Section title="Context">
+                  {c.context?.trim() ? (
+                    <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{c.context}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(c.id)}
+                      className="text-sm text-stone-400 italic hover:text-orange-500 transition-colors text-left"
+                    >
+                      No context yet — add who they are so messages aren&apos;t generic.
+                    </button>
+                  )}
+                </Section>
+
                 {/* Goals — membership in existing goals (no free text) */}
                 <Section title="Goals">
                   {goals.length === 0 ? (

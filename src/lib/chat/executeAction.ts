@@ -31,7 +31,7 @@ function buildContact(args: { name: string; company?: string; role?: string; ema
     linkedinUrl: args.linkedinUrl ?? '',
     email: args.email ?? '',
     phone: args.phone ?? '',
-    notes: '',
+    context: '',
     status: 'Send' as Status,
     score: args.warmth === 'High' ? 85 : args.warmth === 'Low' ? 45 : 62,
     warmth: args.warmth ?? 'Medium',
@@ -100,6 +100,9 @@ export async function executeChatAction(action: ProposedAction): Promise<ActionR
         await updateContact(c.id, patch);
         return { ok: true, receipt: `Updated ${c.name}` };
       }
+      case 'set_context':
+        await updateContact(c.id, { context: action.args.context });
+        return { ok: true, receipt: `Saved context for ${c.name}` };
       case 'set_status':
         await changeStatusLogged(c.id, action.args.status, `Moved to ${action.args.status}`);
         return { ok: true, receipt: `${c.name} → ${action.args.status}` };

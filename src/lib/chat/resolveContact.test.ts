@@ -4,7 +4,7 @@ import type { Contact } from '../mockData';
 
 function c(name: string, company = ''): Contact {
   return {
-    id: name, position: 1, name, company, role: '', linkedinUrl: '', email: '', notes: '',
+    id: name, position: 1, name, company, role: '', linkedinUrl: '', email: '', context: '',
     status: 'Send', score: 50, warmth: 'Medium', avatarColor: '', tags: [],
     lastContacted: '', nextAction: '', aiSummary: '', outreachAngle: '', suggestedMessage: '', interactions: [],
   };

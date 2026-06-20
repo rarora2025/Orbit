@@ -12,7 +12,7 @@ function makeContact(over: Partial<Contact> = {}): Contact {
     role: 'Research Lead',
     linkedinUrl: '',
     email: '',
-    notes: '',
+    context: '',
     status: 'Pending',
     score: 50,
     warmth: 'High',

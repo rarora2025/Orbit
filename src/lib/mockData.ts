@@ -33,7 +33,9 @@ export interface Contact {
   email: string;
   /** Optional phone number — powers a tel: link wherever contact links appear. */
   phone?: string;
-  notes: string;
+  /** Free-text "who this person is" — how you know them, what matters. Grounds
+   *  AI message drafts so they aren't generic. (Renamed from the old `notes`.) */
+  context: string;
   status: Status;
   /** What the user wants from this person — also the title of a Goal, when picked. */
   goal?: string;
@@ -46,6 +48,8 @@ export interface Contact {
   nextFollowUpAt?: string;
   nextAction: string;
   actionNote?: string;
+  /** Hidden from the dashboard board + table when true (kept everywhere else). */
+  archived?: boolean;
   aiSummary: string;
   outreachAngle: string;
   suggestedMessage: string;

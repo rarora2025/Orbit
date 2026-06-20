@@ -18,13 +18,16 @@ function rowToContact(r: Row): Contact {
   // `goal` is intentionally NOT read from the blob — it is derived from goal
   // membership in listContacts (the single source of truth). Older rows stored
   // `relationshipGoal`/`inquiry`/`priority`; all are discarded on next write.
-  const { relationshipGoal, inquiry, priority, goal, ...rest } = r.data as Contact & {
+  const { relationshipGoal, inquiry, priority, goal, notes, ...rest } = r.data as Contact & {
     relationshipGoal?: string;
     inquiry?: string;
     priority?: string;
+    notes?: string;
   };
   void inquiry; void priority; void relationshipGoal; void goal;
-  return { ...rest, id: r.id, position: r.position };
+  // `notes` was renamed to `context`; map legacy blobs forward so existing
+  // contacts keep their text. The old key drops off on the next write.
+  return { ...rest, context: rest.context ?? notes ?? '', id: r.id, position: r.position };
 }
 
 async function requireUserId(): Promise<string> {

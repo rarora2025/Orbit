@@ -17,9 +17,10 @@ interface Props {
   onEdit?: (id: string) => void;
   onMoveContact?: (contactId: string, status: Status, beforeId: string | null) => void;
   onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
 }
 
-export default function KanbanColumn({ status, contacts, selectedId, onSelect, onEdit, onMoveContact, onDelete }: Props) {
+export default function KanbanColumn({ status, contacts, selectedId, onSelect, onEdit, onMoveContact, onDelete, onArchive }: Props) {
   const config = columnConfig[status] ?? { dot: 'bg-stone-400', bg: 'bg-stone-100', text: 'text-stone-600' };
   const draggable = !!onMoveContact;
 
@@ -111,6 +112,7 @@ export default function KanbanColumn({ status, contacts, selectedId, onSelect, o
                 isSelected={selectedId === contact.id}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onArchive={onArchive}
                 draggable={draggable}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('text/plain', contact.id);

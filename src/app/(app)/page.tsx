@@ -93,7 +93,7 @@ export default function InsightsPage() {
 
   return (
     <>
-      <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-y-auto">
         {/* Header — kept compact so the moves sit near the top */}
         <header className="flex-shrink-0 px-4 sm:px-7 pt-5 pb-4 border-b border-stone-100">
           <h1 className="text-lg font-bold text-stone-900 tracking-tight">
@@ -110,7 +110,7 @@ export default function InsightsPage() {
               <span className="text-[12px] font-semibold text-stone-500 bg-stone-100 rounded-full px-2 py-0.5">{goals.length}</span>
             )}
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="flex gap-3 overflow-x-auto scroll-affordance pb-2 -mx-1 px-1">
             {goals.map((goal) => (
               <GoalCard
                 key={goal.id}
@@ -135,7 +135,7 @@ export default function InsightsPage() {
         {loaded && upcoming.length > 0 && (
           <div className="flex-shrink-0 px-4 sm:px-7 pt-5">
             <h2 className="text-sm font-semibold text-stone-700 mb-3">Upcoming</h2>
-            <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-44 overflow-y-auto scroll-affordance pr-1.5">
               {upcoming.map((item) => (
                 <div key={`${item.contactId}-${item.kind}-${item.at}`} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-stone-200 bg-white">
                   <span className={`inline-flex items-center gap-1.5 flex-shrink-0 pl-2 pr-2.5 py-1 rounded-full text-[11px] font-semibold ${UPCOMING_TAG[item.tag].pill}`}>
@@ -159,8 +159,11 @@ export default function InsightsPage() {
           </div>
         )}
 
-        {/* Your next moves */}
-        <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-7 py-5">
+        {/* Your next moves — always gets a real min-height so the full cards
+            (incl. action buttons) fit; the page scrolls when space is tight
+            (this was getting cut off on laptops). It still grows to fill a tall
+            screen via flex-1. */}
+        <div className="flex-1 flex flex-col px-4 sm:px-7 py-5 min-h-[480px]">
           <div className="flex items-center gap-2.5 mb-4 flex-shrink-0">
             <h2 className="text-sm font-semibold text-stone-700">Your next moves</h2>
             {loaded && moves.length > 0 && (
@@ -179,8 +182,8 @@ export default function InsightsPage() {
             <EmptyState caughtUp={allMoves.length > 0} />
           ) : (
             // Horizontal rail of tall cards — scroll sideways through the moves.
-            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-contain -mx-1 px-1">
-              <div className="flex gap-3.5 h-full pb-1">
+            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-contain scroll-affordance -mx-1 px-1">
+              <div className="flex gap-3.5 h-full pb-2">
                 {moves.map((move) => {
                   const c = contacts.find((x) => x.id === move.contactId);
                   return (

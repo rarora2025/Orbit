@@ -22,7 +22,7 @@ import * as api from './contacts.actions';
 function c(id: string, status: Contact['status'], position: number): Contact {
   return {
     id, position, name: id, company: '', role: '', linkedinUrl: '', email: '',
-    notes: '', status, score: 0, warmth: 'Medium',
+    context: '', status, score: 0, warmth: 'Medium',
     avatarColor: '', tags: [], lastContacted: '', nextAction: '', aiSummary: '',
     outreachAngle: '', suggestedMessage: '', interactions: [],
   };
