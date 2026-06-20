@@ -4,7 +4,7 @@ import { Suspense, useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { useCRMStore } from '@/lib/store';
-import { useChatStore, type StoredAction, type StoredMsg } from '@/lib/chatStore';
+import { useChatStore, buildModelHistory, type StoredAction, type StoredMsg } from '@/lib/chatStore';
 import { useGoalsStore } from '@/lib/goalsStore';
 import { Contact, columnConfig } from '@/lib/mockData';
 import { Send, Star, Plus, MessageCircle, Trash2, Check, X, Menu } from 'lucide-react';
@@ -132,9 +132,12 @@ function ChatInner() {
     setInput('');
     setStream({ text: '', proposals: [], phase: 'thinking' });
 
-    // History = the session's messages (now including this user turn) for the model.
-    const history = (useChatStore.getState().sessions.find(s => s.id === sessionId)?.messages ?? [])
-      .map(m => ({ role: m.role, content: m.text }));
+    // History = the session's messages (now including this user turn) for the
+    // model. buildModelHistory appends each past action's outcome so the model
+    // never re-proposes something already done/declined.
+    const history = buildModelHistory(
+      useChatStore.getState().sessions.find(s => s.id === sessionId)?.messages ?? [],
+    );
 
     let text2 = '';
     let proposals: ProposedAction[] = [];

@@ -6,7 +6,7 @@ vi.mock('./chats.actions', () => ({
   listSessions: vi.fn(),
 }));
 
-import { useChatStore } from './chatStore';
+import { useChatStore, buildModelHistory, type StoredMsg } from './chatStore';
 
 beforeEach(() => {
   useChatStore.setState({ sessions: [], activeId: null });
@@ -32,5 +32,32 @@ describe('useChatStore (in-memory)', () => {
     const id2 = useChatStore.getState().addUserMessage('two');
     expect(id2).toBe(id);
     expect(useChatStore.getState().sessions[0].messages).toHaveLength(2);
+  });
+});
+
+describe('buildModelHistory', () => {
+  it('keeps user turns as plain text', () => {
+    const msgs: StoredMsg[] = [{ role: 'user', text: 'hi' }];
+    expect(buildModelHistory(msgs)).toEqual([{ role: 'user', content: 'hi' }]);
+  });
+
+  it('records a confirmed action so the model knows it is already done', () => {
+    const msgs: StoredMsg[] = [
+      { role: 'user', text: "update Shayne's phone" },
+      {
+        role: 'assistant', id: 'a1', text: 'On it.',
+        actions: [{ action: { id: 'x', type: 'update_contact', args: { contactName: 'Shayne', phone: '123' } }, summary: 'Update Shayne · phone', status: 'confirmed' }],
+      },
+    ];
+    const h = buildModelHistory(msgs);
+    expect(h[1].content).toContain('On it.');
+    expect(h[1].content).toContain('already handled — DONE: Update Shayne · phone');
+  });
+
+  it('marks a still-pending action as awaiting (so it is not re-proposed)', () => {
+    const msgs: StoredMsg[] = [
+      { role: 'assistant', id: 'a1', text: '', actions: [{ action: { id: 'y', type: 'set_context', args: { contactName: 'Ada', context: 'x' } }, summary: 'Save context for Ada', status: 'pending' }] },
+    ];
+    expect(buildModelHistory(msgs)[0].content).toBe('[action already handled — AWAITING user confirmation: Save context for Ada]');
   });
 });

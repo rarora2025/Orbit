@@ -93,7 +93,7 @@ export default function InsightsPage() {
 
   return (
     <>
-      <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-y-auto md:overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-white border border-stone-200/70 shadow-xl shadow-stone-300/40 overflow-y-auto">
         {/* Header — kept compact so the moves sit near the top */}
         <header className="flex-shrink-0 px-4 sm:px-7 pt-5 pb-4 border-b border-stone-100">
           <h1 className="text-lg font-bold text-stone-900 tracking-tight">
@@ -159,9 +159,11 @@ export default function InsightsPage() {
           </div>
         )}
 
-        {/* Your next moves — on mobile it gets a real min-height so the full
-            cards (incl. action buttons) fit and the page scrolls to them. */}
-        <div className="flex-1 flex flex-col px-4 sm:px-7 py-5 min-h-[480px] md:min-h-0">
+        {/* Your next moves — always gets a real min-height so the full cards
+            (incl. action buttons) fit; the page scrolls when space is tight
+            (this was getting cut off on laptops). It still grows to fill a tall
+            screen via flex-1. */}
+        <div className="flex-1 flex flex-col px-4 sm:px-7 py-5 min-h-[480px]">
           <div className="flex items-center gap-2.5 mb-4 flex-shrink-0">
             <h2 className="text-sm font-semibold text-stone-700">Your next moves</h2>
             {loaded && moves.length > 0 && (

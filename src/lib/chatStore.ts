@@ -37,6 +37,31 @@ export interface ChatSession {
   updatedAt: number;
 }
 
+/**
+ * Flatten stored messages into the {role, content} history the model sees.
+ *
+ * Crucially, each assistant message's actions are appended as bracketed records
+ * with their outcome. Without this the model only sees the plain text of past
+ * turns, so a request like "update Shayne's phone" stays visible with no sign it
+ * was handled — and the model re-proposes the same action on later turns (the
+ * duplicate-approval bug). The records tell it those actions are already done /
+ * declined / awaiting, so it never repeats them.
+ */
+export function buildModelHistory(messages: StoredMsg[]): { role: 'user' | 'assistant'; content: string }[] {
+  return messages.map((m) => {
+    if (m.role === 'user') return { role: 'user' as const, content: m.text };
+    const records = (m.actions ?? []).map((a) => {
+      const tag =
+        a.status === 'confirmed' ? 'DONE'
+        : a.status === 'cancelled' ? 'DECLINED by user'
+        : a.status === 'failed' ? 'FAILED'
+        : 'AWAITING user confirmation';
+      return `[action already handled — ${tag}: ${a.summary}]`;
+    });
+    return { role: 'assistant' as const, content: [m.text, ...records].filter(Boolean).join('\n') };
+  });
+}
+
 interface ChatStore {
   sessions: ChatSession[];
   activeId: string | null;
