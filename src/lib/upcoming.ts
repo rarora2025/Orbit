@@ -9,7 +9,8 @@ function meetingShort(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 function dateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  // Numeric M/D (e.g. "6/16") for follow-up / overdue / upcoming dates.
+  return new Date(iso).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
 }
 
 /**

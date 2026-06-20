@@ -135,7 +135,9 @@ export default function ContactDetailPanel({
       className={[
         'fixed top-[4.75rem] right-0 bottom-0 z-50 w-full max-w-[420px] transition-transform duration-300 ease-out',
         open ? 'translate-x-0' : 'translate-x-full',
-        'md:relative md:z-auto md:max-w-none md:translate-x-0 md:flex-shrink-0 md:overflow-hidden md:transition-[width]',
+        // md:relative (needed so the resize handle anchors to the panel) re-activates
+        // the top-[4.75rem] offset, which pushed the panel below the viewport — reset it.
+        'md:relative md:top-0 md:z-auto md:max-w-none md:translate-x-0 md:flex-shrink-0 md:overflow-hidden md:transition-[width]',
         open ? 'md:w-[var(--panel-w)]' : 'md:w-0',
       ].join(' ')}
       aria-hidden={!open}
